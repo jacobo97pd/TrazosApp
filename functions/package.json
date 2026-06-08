@@ -1,0 +1,15 @@
+{
+  "name": "runrace-functions",
+  "description": "RunRace Firebase Cloud Functions",
+  "version": "1.0.0",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.3.0",
+    "firebase-functions": "^5.0.0",
+    "@turf/turf": "^7.1.0"
+  },
+  "private": true
+}

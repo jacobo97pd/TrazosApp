@@ -1,0 +1,10 @@
+{
+  "name": "runrace-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scripts de utilidad para RunRace (seed, migraciones…)",
+  "dependencies": {
+    "firebase-admin": "^12.3.0",
+    "@turf/turf": "^7.1.0"
+  }
+}

@@ -1,0 +1,29 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Fotos de perfil: lectura pública (autenticada), escritura solo del dueño.
+    // Límite de 5 MB y solo imágenes.
+    match /avatars/{uid}/{fileName} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null
+                   && request.auth.uid == uid
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Logos de club: lectura autenticada; escritura de cualquier usuario
+    // autenticado (la app solo ofrece subir al admin). Límite 5 MB, solo imágenes.
+    match /club_logos/{clubId}/{fileName} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Por defecto: todo lo demás denegado.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

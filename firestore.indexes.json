@@ -1,0 +1,14 @@
+{
+  "indexes": [
+    {
+      "comment": "checkExpiredZones / remindExpiring: filtran zonas por expiresAt y ownerId != null",
+      "collectionGroup": "zones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ownerId", "order": "ASCENDING" },
+        { "fieldPath": "expiresAt", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

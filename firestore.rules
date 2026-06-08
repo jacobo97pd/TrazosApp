@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+    function isAuth()          { return request.auth != null; }
+    function isOwner(uid)      { return request.auth.uid == uid; }
+    function isClubAdmin(clubId) {
+      return get(/databases/$(database)/documents/clubs/$(clubId))
+               .data.adminId == request.auth.uid;
+    }
+    function isClubMember(clubId) {
+      return request.auth.uid in
+        get(/databases/$(database)/documents/clubs/$(clubId)).data.members;
+    }
+    function onlyAttendeesChanged() {
+      return request.resource.data.diff(resource.data)
+               .affectedKeys().hasOnly(['attendees']);
+    }
+
+    // ── Users ─────────────────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read:   if isAuth();
+      allow create: if isOwner(uid);
+      // El usuario solo puede editar su propio perfil; ownerId solo desde server
+      allow update: if isOwner(uid) &&
+                       !request.resource.data.diff(resource.data).affectedKeys()
+                         .hasAny(['capturedZones']);
+    }
+
+    // ── Zones ─────────────────────────────────────────────────────────────
+    match /zones/{zoneId} {
+      allow read: if isAuth();
+      // La creación de zonas la hace el admin desde Firebase Console o seed script
+      allow create: if false;
+      // La captura la valida la Cloud Function; el cliente puede proponer pero
+      // la escritura final debe venir del server. Por ahora permitimos update
+      // para facilitar desarrollo — CAMBIAR A false EN PRODUCCIÓN
+      allow update: if isAuth();
+      allow delete: if false;
+    }
+
+    // ── Runs ──────────────────────────────────────────────────────────────
+    match /runs/{runId} {
+      allow read:   if isAuth();
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false; // runs son inmutables
+    }
+
+    // ── Announcements (tablón) ────────────────────────────────────────────
+    // Solo lectura para usuarios autenticados; los crea el admin desde la
+    // consola de Firebase (escritura denegada al cliente).
+    match /announcements/{announcementId} {
+      allow read:  if isAuth();
+      allow write: if false;
+    }
+
+    // ── Clubs ─────────────────────────────────────────────────────────────
+    match /clubs/{clubId} {
+      allow read:   if isAuth();
+      allow create: if isAuth() && request.resource.data.adminId == request.auth.uid;
+      allow update: if isAuth() && (
+        isClubAdmin(clubId) ||
+        // Cualquier usuario autenticado puede añadirse como miembro
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+      );
+      allow delete: if isClubAdmin(clubId);
+
+      // ── Chat del club (subcolección) ────────────────────────────────────
+      // Solo miembros del club pueden leer y escribir; mensajes inmutables.
+      match /messages/{messageId} {
+        allow read:   if isAuth() && isClubMember(clubId);
+        allow create: if isAuth() && isClubMember(clubId) &&
+                         request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    // ── Events (globales; visibles en club y, si isPublic, en el tablón) ───
+    match /events/{eventId} {
+      allow read: if isAuth() && (
+        resource.data.isPublic == true || isClubMember(resource.data.clubId)
+      );
+      allow create: if isAuth()
+        && request.resource.data.createdBy == request.auth.uid
+        && isClubMember(request.resource.data.clubId);
+      // Editar el evento: creador o admin del club.
+      // Apuntarse/salir (solo cambia 'attendees'): cualquiera que pueda verlo.
+      allow update: if isAuth() && (
+        request.auth.uid == resource.data.createdBy ||
+        isClubAdmin(resource.data.clubId) ||
+        (onlyAttendeesChanged() &&
+          (resource.data.isPublic == true || isClubMember(resource.data.clubId)))
+      );
+      allow delete: if isAuth() && (
+        request.auth.uid == resource.data.createdBy ||
+        isClubAdmin(resource.data.clubId)
+      );
+    }
+  }
+}
