@@ -53,13 +53,13 @@ Future<void> main() async {
 
   runApp(
     const ProviderScope(
-      child: RunRaceApp(),
+      child: TrazosApp(),
     ),
   );
 }
 
-class RunRaceApp extends ConsumerWidget {
-  const RunRaceApp({super.key});
+class TrazosApp extends ConsumerWidget {
+  const TrazosApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -73,14 +73,15 @@ class RunRaceApp extends ConsumerWidget {
     });
 
     return MaterialApp.router(
-      title: 'RunRace',
+      title: 'Trazos',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       routerConfig: router,
       builder: (context, child) {
         // Escala de texto fija — evita que ajustes de accesibilidad rompan el layout
         return MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
+          data:
+              MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
           child: child ?? const SizedBox.shrink(),
         );
       },

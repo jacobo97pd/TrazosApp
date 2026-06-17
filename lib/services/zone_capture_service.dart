@@ -12,6 +12,7 @@ enum ZoneCaptureResult {
   noZoneInArea,
   centroidNotInPolygon,
   insufficientOverlap,
+  invalidSpeed,
   serverError,
   zoneNotFound,
   invalidPolygon,
@@ -25,6 +26,7 @@ const _reasonMap = {
   'centroid_not_inside':  ZoneCaptureResult.centroidNotInPolygon,
   'no_overlap':           ZoneCaptureResult.insufficientOverlap,
   'insufficient_overlap': ZoneCaptureResult.insufficientOverlap,
+  'invalid_speed':        ZoneCaptureResult.invalidSpeed,
   'zone_not_found':       ZoneCaptureResult.zoneNotFound,
 };
 
@@ -35,6 +37,8 @@ class ZoneCaptureService {
   Future<ZoneCaptureResult> attemptCapture({
     required List<LatLng> runnerPolygon,
     required ZoneModel zone,
+    required double distanceMeters,
+    required int durationSeconds,
   }) async {
     if (runnerPolygon.length < AppConstants.minPolygonPoints) {
       return ZoneCaptureResult.insufficientDistance;
@@ -49,6 +53,8 @@ class ZoneCaptureService {
         'polygonCoords': runnerPolygon
             .map((p) => {'lat': p.latitude, 'lng': p.longitude})
             .toList(),
+        'distanceMeters':  distanceMeters,
+        'durationSeconds': durationSeconds,
       });
 
       final data = result.data;
@@ -72,6 +78,7 @@ class ZoneCaptureService {
     ZoneCaptureResult.noZoneInArea          => 'Tu cerco no rodea ninguna zona.',
     ZoneCaptureResult.centroidNotInPolygon  => 'Tu ruta no cubre el centro de la zona.',
     ZoneCaptureResult.insufficientOverlap   => 'Debes cubrir al menos el 60 % de la zona.',
+    ZoneCaptureResult.invalidSpeed          => 'Velocidad no válida. El recorrido debe hacerse corriendo (sin bici/coche).',
     ZoneCaptureResult.zoneNotFound          => 'Zona no encontrada.',
     ZoneCaptureResult.invalidPolygon        => 'Polígono inválido. Vuelve a trazar la ruta.',
     ZoneCaptureResult.serverError           => 'Error del servidor. Inténtalo de nuevo.',

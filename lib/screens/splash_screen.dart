@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/theme.dart';
@@ -25,8 +26,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
-    _scale   = Tween<double>(begin: 0.7, end: 1.0).animate(
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1200));
+    _scale = Tween<double>(begin: 0.7, end: 1.0).animate(
       CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut),
     );
     _opacity = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -55,7 +57,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     }
 
     final prefs = await SharedPreferences.getInstance();
-    final onboardingDone = prefs.getBool(AppConstants.prefOnboardingDone) ?? false;
+    final onboardingDone =
+        prefs.getBool(AppConstants.prefOnboardingDone) ?? false;
     // currentUser refleja al instante el login con custom token de Strava
     final isLoggedIn = FirebaseAuth.instance.currentUser != null;
 
@@ -92,18 +95,26 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Logo placeholder — reemplaza con assets/images/logo.png
-                  Container(
-                    width: 96, height: 96,
-                    decoration: BoxDecoration(
-                      gradient: AppColors.gradientAccent,
-                      borderRadius: BorderRadius.circular(28),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.cover,
                     ),
-                    child: const Icon(Icons.directions_run_rounded,
-                        color: Colors.white, size: 52),
                   ),
                   const SizedBox(height: 20),
-                  Text('RunRace', style: AppTextStyles.displayLarge),
+                  Text(
+                    'TRAZOS',
+                    style: GoogleFonts.cinzel(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w300,
+                      letterSpacing: 8,
+                      color: AppColors.textPrimary,
+                      height: 1.1,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Text('Conquista la ciudad corriendo',
                       style: AppTextStyles.bodyMedium
@@ -111,7 +122,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   if (_connectingStrava) ...[
                     const SizedBox(height: 28),
                     const SizedBox(
-                      width: 22, height: 22,
+                      width: 22,
+                      height: 22,
                       child: CircularProgressIndicator(
                           strokeWidth: 2.5, color: Color(0xFFFC4C02)),
                     ),

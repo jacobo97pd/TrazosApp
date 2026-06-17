@@ -92,25 +92,27 @@ class _RunScreenState extends ConsumerState<RunScreen> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          // ── Mapa (no interactivo, sigue al corredor) ───────────────────────
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: run.currentPosition ?? const LatLng(40.4168, -3.7038),
-              zoom:   16.5,
+          // ── Mapa (NO interactivo; la cámara sigue al corredor por código) ──
+          IgnorePointer(
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: run.currentPosition ?? const LatLng(40.4168, -3.7038),
+                zoom:   16.5,
+              ),
+              onMapCreated:      _onMapCreated,
+              myLocationEnabled: true,
+              polylines:         polylines,
+              polygons:          polygons,
+              markers:           markers,
+              scrollGesturesEnabled:   false,
+              zoomGesturesEnabled:     false,
+              tiltGesturesEnabled:     false,
+              rotateGesturesEnabled:   false,
+              zoomControlsEnabled:     false,
+              myLocationButtonEnabled: false,
+              mapToolbarEnabled:       false,
+              compassEnabled:          false,
             ),
-            onMapCreated:      _onMapCreated,
-            myLocationEnabled: true,
-            polylines:         polylines,
-            polygons:          polygons,
-            markers:           markers,
-            scrollGesturesEnabled:   false,
-            zoomGesturesEnabled:     false,
-            tiltGesturesEnabled:     false,
-            rotateGesturesEnabled:   false,
-            zoomControlsEnabled:     false,
-            myLocationButtonEnabled: false,
-            mapToolbarEnabled:       false,
-            compassEnabled:          false,
           ),
 
           // ── Confetti ───────────────────────────────────────────────────────

@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>RunRace</string>
+	<string>Trazos</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>RunRace</string>
+	<string>Trazos</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -29,11 +29,11 @@
 
 	<!-- ── Localización ─────────────────────────────────────────────────── -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>RunRace necesita tu ubicación para trazar tu ruta y capturar zonas mientras corres.</string>
+	<string>Trazos necesita tu ubicación para trazar tu ruta y capturar zonas mientras corres.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>RunRace rastrea tu posición en background para que puedas capturar zonas con la pantalla apagada.</string>
+	<string>Trazos rastrea tu posición en background para que puedas capturar zonas con la pantalla apagada.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>RunRace rastrea tu posición en background para que puedas capturar zonas con la pantalla apagada.</string>
+	<string>Trazos rastrea tu posición en background para que puedas capturar zonas con la pantalla apagada.</string>
 
 	<!-- ── Background modes ─────────────────────────────────────────────── -->
 	<key>UIBackgroundModes</key>

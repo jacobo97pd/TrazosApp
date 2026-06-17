@@ -15,9 +15,9 @@ import '../core/constants.dart';
 import '../models/run_model.dart';
 
 // ── Claves SecureStorage ──────────────────────────────────────────────────────
-const _kAccessToken  = 'strava_access_token';
+const _kAccessToken = 'strava_access_token';
 const _kRefreshToken = 'strava_refresh_token';
-const _kExpiresAt    = 'strava_expires_at'; // Unix timestamp en segundos
+const _kExpiresAt = 'strava_expires_at'; // Unix timestamp en segundos
 
 // ── DTO interno ───────────────────────────────────────────────────────────────
 class StravaTokenData {
@@ -31,7 +31,7 @@ class StravaTokenData {
 
   final String accessToken;
   final String refreshToken;
-  final int    expiresAt;     // Unix timestamp (segundos)
+  final int expiresAt; // Unix timestamp (segundos)
   final String athleteId;
   final String athleteName;
 }
@@ -42,8 +42,8 @@ class StravaService {
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
-  final _appLinks   = AppLinks();
-  final _functions  = FirebaseFunctions.instanceFor(region: 'europe-west1');
+  final _appLinks = AppLinks();
+  final _functions = FirebaseFunctions.instanceFor(region: 'europe-west1');
   final _httpClient = http.Client();
 
   // ── 1. connectStrava ─────────────────────────────────────────────────────────
@@ -139,11 +139,11 @@ class StravaService {
 
     // Guarda los tokens de Strava para subir carreras / refrescar más tarde.
     await _persistTokens(StravaTokenData(
-      accessToken:  data['accessToken']  as String,
+      accessToken: data['accessToken'] as String,
       refreshToken: data['refreshToken'] as String,
-      expiresAt:    (data['expiresAt']   as num).toInt(),
-      athleteId:    data['athleteId']    as String,
-      athleteName:  data['athleteName']  as String? ?? '',
+      expiresAt: (data['expiresAt'] as num).toInt(),
+      athleteId: data['athleteId'] as String,
+      athleteName: data['athleteName'] as String? ?? '',
     ));
   }
 
@@ -207,11 +207,11 @@ class StravaService {
 
     final data = result.data;
     final tokenData = StravaTokenData(
-      accessToken:  data['accessToken']  as String,
+      accessToken: data['accessToken'] as String,
       refreshToken: data['refreshToken'] as String,
-      expiresAt:    (data['expiresAt']   as num).toInt(),
-      athleteId:    data['athleteId']    as String,
-      athleteName:  data['athleteName']  as String? ?? '',
+      expiresAt: (data['expiresAt'] as num).toInt(),
+      athleteId: data['athleteId'] as String,
+      athleteName: data['athleteName'] as String? ?? '',
     );
 
     await _persistTokens(tokenData);
@@ -220,16 +220,16 @@ class StravaService {
 
   Future<void> _persistTokens(StravaTokenData tokens) async {
     await Future.wait([
-      _storage.write(key: _kAccessToken,  value: tokens.accessToken),
+      _storage.write(key: _kAccessToken, value: tokens.accessToken),
       _storage.write(key: _kRefreshToken, value: tokens.refreshToken),
-      _storage.write(key: _kExpiresAt,    value: tokens.expiresAt.toString()),
+      _storage.write(key: _kExpiresAt, value: tokens.expiresAt.toString()),
     ]);
 
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
     await FirebaseFirestore.instance.collection('users').doc(uid).update({
-      'stravaId':        tokens.athleteId,
+      'stravaId': tokens.athleteId,
       'stravaConnected': true,
     });
   }
@@ -246,10 +246,10 @@ class StravaService {
     if (uid == null) return;
 
     await FirebaseFirestore.instance.collection('users').doc(uid).update({
-      'stravaId':        null,
-      'stravaToken':     null,
+      'stravaId': null,
+      'stravaToken': null,
       'stravaConnected': false,
-      'stravaImported':  false,
+      'stravaImported': false,
     });
   }
 
@@ -263,7 +263,7 @@ class StravaService {
   // en menos de 5 minutos. Devuelve null si no hay sesión activa.
 
   Future<String?> _validAccessToken() async {
-    final accessToken  = await _storage.read(key: _kAccessToken);
+    final accessToken = await _storage.read(key: _kAccessToken);
     final refreshToken = await _storage.read(key: _kRefreshToken);
     final expiresAtStr = await _storage.read(key: _kExpiresAt);
 
@@ -289,13 +289,13 @@ class StravaService {
           .httpsCallable('refreshStravaToken')
           .call<Map<String, dynamic>>({'refreshToken': refreshToken});
 
-      final data       = result.data;
-      final newToken   = data['accessToken'] as String;
-      final expiresAt  = (data['expiresAt']  as num).toInt();
+      final data = result.data;
+      final newToken = data['accessToken'] as String;
+      final expiresAt = (data['expiresAt'] as num).toInt();
 
       await Future.wait([
         _storage.write(key: _kAccessToken, value: newToken),
-        _storage.write(key: _kExpiresAt,   value: expiresAt.toString()),
+        _storage.write(key: _kExpiresAt, value: expiresAt.toString()),
       ]);
 
       return newToken;
@@ -327,20 +327,20 @@ class StravaService {
 
     final zoneName = run.capturedZoneId != null
         ? '¡Zona capturada! ${run.distanceKm.toStringAsFixed(2)} km'
-        : 'Carrera RunRace ${run.distanceKm.toStringAsFixed(2)} km';
+        : 'Carrera Trazos ${run.distanceKm.toStringAsFixed(2)} km';
 
     final body = jsonEncode({
-      'name':             zoneName,
-      'type':             'Run',
-      'sport_type':       'Run',
+      'name': zoneName,
+      'type': 'Run',
+      'sport_type': 'Run',
       'start_date_local': run.startedAt.toUtc().toIso8601String(),
-      'elapsed_time':     run.duration,
-      'description':      'RunRace · ${run.distanceKm.toStringAsFixed(2)} km '
-                          '· Ritmo ${run.formattedDuration} '
-                          '${run.capturedZoneId != null ? '· Zona capturada 🏁' : ''}',
-      'distance':         run.distance,
-      'trainer':          0,
-      'commute':          0,
+      'elapsed_time': run.duration,
+      'description': 'Trazos · ${run.distanceKm.toStringAsFixed(2)} km '
+          '· Ritmo ${run.formattedDuration} '
+          '${run.capturedZoneId != null ? '· Zona capturada 🏁' : ''}',
+      'distance': run.distance,
+      'trainer': 0,
+      'commute': 0,
     });
 
     http.Response response;
@@ -350,7 +350,7 @@ class StravaService {
             Uri.parse('https://www.strava.com/api/v3/activities'),
             headers: {
               'Authorization': 'Bearer $token',
-              'Content-Type':  'application/json',
+              'Content-Type': 'application/json',
             },
             body: body,
           )
@@ -361,7 +361,7 @@ class StravaService {
 
     switch (response.statusCode) {
       case 201:
-        final data             = jsonDecode(response.body) as Map<String, dynamic>;
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
         final stravaActivityId = data['id']?.toString();
         if (stravaActivityId != null && run.id.isNotEmpty) {
           await FirebaseFirestore.instance
@@ -378,10 +378,12 @@ class StravaService {
           _storage.delete(key: _kRefreshToken),
           _storage.delete(key: _kExpiresAt),
         ]);
-        throw Exception('Sesión de Strava caducada. Vuelve a conectar en tu perfil.');
+        throw Exception(
+            'Sesión de Strava caducada. Vuelve a conectar en tu perfil.');
 
       case 429:
-        throw Exception('Límite de peticiones de Strava alcanzado. Inténtalo en unos minutos.');
+        throw Exception(
+            'Límite de peticiones de Strava alcanzado. Inténtalo en unos minutos.');
 
       default:
         return null;
@@ -399,10 +401,8 @@ class StravaService {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return 0;
 
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .get();
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
     if (userDoc.data()?['stravaImported'] == true) return 0;
 
@@ -410,21 +410,19 @@ class StravaService {
     if (token == null) return 0;
 
     double totalMeters = 0;
-    int    page        = 1;
-    const  perPage     = 200;
+    int page = 1;
+    const perPage = 200;
 
     while (true) {
       http.Response response;
       try {
-        response = await _httpClient
-            .get(
-              Uri.parse(
-                'https://www.strava.com/api/v3/athlete/activities'
-                '?per_page=$perPage&page=$page',
-              ),
-              headers: {'Authorization': 'Bearer $token'},
-            )
-            .timeout(const Duration(seconds: 30));
+        response = await _httpClient.get(
+          Uri.parse(
+            'https://www.strava.com/api/v3/athlete/activities'
+            '?per_page=$perPage&page=$page',
+          ),
+          headers: {'Authorization': 'Bearer $token'},
+        ).timeout(const Duration(seconds: 30));
       } on TimeoutException {
         break;
       }
@@ -448,7 +446,7 @@ class StravaService {
     final totalKm = totalMeters / 1000;
 
     await FirebaseFirestore.instance.collection('users').doc(uid).update({
-      'totalKm':        totalKm,
+      'totalKm': totalKm,
       'stravaImported': true,
     });
 

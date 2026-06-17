@@ -10,6 +10,18 @@ abstract final class AppConstants {
   static const double locationMinDistanceM    = 5.0;   // filtro mínimo de movimiento
   static const double staleLocationSeconds    = 10.0;
 
+  // Anti-trampas por velocidad (corriendo, no en bici/coche). Tunables.
+  // Velocidad media de toda la carrera permitida para validar la captura.
+  static const double maxAvgSpeedKmh          = 20.0;  // por encima ≈ bici/coche
+  static const double minAvgSpeedKmh          = 2.0;   // por debajo ≈ parado/deriva GPS
+  // Salto entre dos lecturas GPS imposible corriendo → se descarta (no suma km).
+  static const double glitchSpeedKmh          = 35.0;
+
+  // Puntuación / ranking — todas las zonas valen igual; el score combina
+  // zonas conquistadas y km totales recorridos. Tunables.
+  static const int    scorePerZone            = 100;   // 1 zona = 10 km de score
+  static const double scorePerKm              = 10.0;
+
   // Mapa
   static const double defaultZoom             = 15.0;
   static const double runningZoom             = 16.5;

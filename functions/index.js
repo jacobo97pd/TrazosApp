@@ -20,6 +20,9 @@ const ZONE_EXPIRATION_DAYS = 7;
 const MIN_POLYGON_POINTS   = 4;
 const MIN_PERIMETER_M      = 500;
 const MIN_OVERLAP_RATIO    = 0.60;
+// Anti-trampas por velocidad media (debe coincidir con AppConstants en el cliente).
+const MAX_AVG_SPEED_KMH    = 20;  // por encima ≈ bici/coche
+const MIN_AVG_SPEED_KMH    = 2;   // por debajo ≈ parado/deriva GPS
 
 // Secretos de Strava — definir con:
 //   firebase functions:secrets:set STRAVA_CLIENT_ID
@@ -112,6 +115,17 @@ exports.validateCapture = onCall({ region: REGION }, async (request) => {
     return { success: false, reason: "insufficient_distance" };
   }
 
+  // c2) Anti-trampas por velocidad media (defensa en profundidad; el cliente
+  // también lo valida). Si no llegan los datos, no bloqueamos por esto.
+  const distM = Number(request.data?.distanceMeters);
+  const durS  = Number(request.data?.durationSeconds);
+  if (Number.isFinite(distM) && Number.isFinite(durS) && durS > 0) {
+    const avgKmh = (distM / 1000) / (durS / 3600);
+    if (avgKmh > MAX_AVG_SPEED_KMH || avgKmh < MIN_AVG_SPEED_KMH) {
+      return { success: false, reason: "invalid_speed" };
+    }
+  }
+
   // ── Lectura + escritura atómica ──────────────────────────────────────────
   const zoneRef = db.collection("zones").doc(zoneId);
   const userRef = db.collection("users").doc(uid);
@@ -131,6 +145,13 @@ exports.validateCapture = onCall({ region: REGION }, async (request) => {
 
     const zone = zoneSnap.data();
     const user = userSnap.data() ?? {};
+    let prevOwnerRef = null;
+    let prevOwnerSnap = null;
+
+    if (zone.ownerId && zone.ownerId !== uid) {
+      prevOwnerRef = db.collection("users").doc(zone.ownerId);
+      prevOwnerSnap = await tx.get(prevOwnerRef);
+    }
 
     // d) Centroide de la zona dentro del polígono del corredor
     const centroidPoint = turf.point([
@@ -193,6 +214,12 @@ exports.validateCapture = onCall({ region: REGION }, async (request) => {
       capturedZones: FieldValue.arrayUnion(zoneId),
     });
 
+    if (prevOwnerRef && prevOwnerSnap?.exists) {
+      tx.update(prevOwnerRef, {
+        capturedZones: FieldValue.arrayRemove(zoneId),
+      });
+    }
+
     return { success: true, points: zone.points ?? 0 };
   });
 
@@ -248,6 +275,7 @@ exports.checkExpiredZones = onSchedule(
     for (let i = 0; i < snap.docs.length; i += BATCH_SIZE) {
       const batch = db.batch();
       snap.docs.slice(i, i + BATCH_SIZE).forEach((doc) => {
+        const zone = doc.data();
         batch.update(doc.ref, {
           ownerId:    null,
           ownerName:  null,
@@ -256,6 +284,11 @@ exports.checkExpiredZones = onSchedule(
           expiresAt:  null,
           color:      null,
         });
+        if (zone.ownerId) {
+          batch.update(db.collection("users").doc(zone.ownerId), {
+            capturedZones: FieldValue.arrayRemove(doc.id),
+          });
+        }
       });
       await batch.commit();
     }
@@ -273,6 +306,60 @@ exports.checkExpiredZones = onSchedule(
 // Solo actúa cuando el array members[] cambia para evitar bucle infinito
 // (la propia actualización de totalZones/totalKm disparará este trigger,
 //  pero la comparación de members lo cortocircuitará).
+
+async function recalcClubStats(clubId) {
+  if (!clubId) return;
+
+  const clubRef = db.collection("clubs").doc(clubId);
+  const clubSnap = await clubRef.get();
+  if (!clubSnap.exists) return;
+
+  const members = clubSnap.data()?.members ?? [];
+  if (members.length === 0) {
+    await clubRef.update({ totalZones: 0, totalKm: 0 });
+    return;
+  }
+
+  const userRefs = members.map((uid) => db.collection("users").doc(uid));
+  const userDocs = await db.getAll(...userRefs);
+
+  const totalZones = userDocs.reduce(
+    (sum, d) => sum + (d.data()?.capturedZones?.length ?? 0), 0
+  );
+  const totalKm = userDocs.reduce(
+    (sum, d) => sum + (d.data()?.totalKm ?? 0), 0
+  );
+
+  await clubRef.update({ totalZones, totalKm });
+}
+
+exports.onUserStatsWritten = onDocumentWritten(
+  { document: "users/{uid}", region: REGION },
+  async (event) => {
+    const before = event.data?.before?.data();
+    const after  = event.data?.after?.data();
+
+    const beforeZones = [...(before?.capturedZones ?? [])].sort().join(",");
+    const afterZones  = [...(after?.capturedZones  ?? [])].sort().join(",");
+    const beforeKm    = before?.totalKm ?? 0;
+    const afterKm     = after?.totalKm ?? 0;
+    const beforeClub  = before?.clubId ?? null;
+    const afterClub   = after?.clubId ?? null;
+
+    if (
+      beforeZones === afterZones &&
+      beforeKm === afterKm &&
+      beforeClub === afterClub
+    ) {
+      return;
+    }
+
+    const affectedClubs = new Set(
+      [beforeClub, afterClub].filter((clubId) => Boolean(clubId))
+    );
+    await Promise.all([...affectedClubs].map(recalcClubStats));
+  }
+);
 
 exports.onClubMemberJoin = onDocumentWritten(
   { document: "clubs/{clubId}", region: REGION },

@@ -1,6 +1,6 @@
-// Smoke test básico de RunRace.
+// Smoke test básico de Trazos.
 //
-// La app completa (RunRaceApp) inicializa Firebase en main(), lo que no es
+// La app completa (TrazosApp) inicializa Firebase en main(), lo que no es
 // posible en un test unitario sin emuladores/mocks. Este test verifica el
 // tema y los widgets de forma aislada. Amplíalo con mocks de Firebase
 // (p. ej. firebase_auth_mocks) cuando montes la suite de tests.
@@ -16,10 +16,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: buildAppTheme(),
-        home: const Scaffold(body: Center(child: Text('RunRace'))),
+        home: const Scaffold(body: Center(child: Text('Trazos'))),
       ),
     );
 
-    expect(find.text('RunRace'), findsOneWidget);
+    expect(find.text('Trazos'), findsOneWidget);
   });
 }

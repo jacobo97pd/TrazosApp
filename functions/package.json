@@ -1,6 +1,6 @@
 {
   "name": "runrace-functions",
-  "description": "RunRace Firebase Cloud Functions",
+  "description": "Trazos Firebase Cloud Functions",
   "version": "1.0.0",
   "main": "index.js",
   "engines": {

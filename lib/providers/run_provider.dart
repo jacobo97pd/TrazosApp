@@ -107,6 +107,9 @@ class RunNotifier extends Notifier<RunState> {
   Duration _pausedTotal = Duration.zero;
   DateTime? _pauseStart;
 
+  // Tiempo de la última lectura GPS, para calcular velocidad por segmento.
+  DateTime? _lastPosTime;
+
   @override
   RunState build() => const RunState();
 
@@ -121,6 +124,7 @@ class RunNotifier extends Notifier<RunState> {
     _startedAt   = DateTime.now();
     _pausedTotal = Duration.zero;
     _pauseStart  = null;
+    _lastPosTime = null;
     state = const RunState(isRunning: true);
     _startTimer();
     _startLocationTracking();
@@ -152,6 +156,7 @@ class RunNotifier extends Notifier<RunState> {
     _startedAt = null;
     _pausedTotal = Duration.zero;
     _pauseStart = null;
+    _lastPosTime = null;
     state = const RunState();
   }
 
@@ -172,14 +177,25 @@ class RunNotifier extends Notifier<RunState> {
       if (state.isPolygonClosed) return; // ya cerrado, ignorar
       final newPoint = LatLng(position.latitude, position.longitude);
       final route    = state.route;
+      final now      = position.timestamp;
 
       double addedDistance = 0;
       if (route.isNotEmpty) {
-        addedDistance = Geolocator.distanceBetween(
+        final segMeters = Geolocator.distanceBetween(
           route.last.latitude, route.last.longitude,
           newPoint.latitude, newPoint.longitude,
         );
+        // Velocidad del segmento; si es un salto imposible (deriva GPS o
+        // vehículo) no sumamos su distancia para no inflar los km.
+        final segSecs = _lastPosTime != null
+            ? now.difference(_lastPosTime!).inMilliseconds / 1000.0
+            : 0.0;
+        final segKmh = segSecs > 0 ? (segMeters / 1000) / (segSecs / 3600) : 0.0;
+        if (segKmh <= AppConstants.glitchSpeedKmh) {
+          addedDistance = segMeters;
+        }
       }
+      _lastPosTime = now;
 
       final start = route.isEmpty ? newPoint : route.first;
       final distFromStart = Geolocator.distanceBetween(
@@ -223,6 +239,20 @@ class RunNotifier extends Notifier<RunState> {
 
     state = state.copyWith(isCapturing: true);
 
+    // Anti-trampas: la velocidad media de toda la carrera debe ser de correr,
+    // no de bici/coche (ni de estar parado).
+    final hours  = state.durationSeconds / 3600.0;
+    final avgKmh = hours > 0 ? (state.distanceMeters / 1000) / hours : 0.0;
+    if (avgKmh > AppConstants.maxAvgSpeedKmh ||
+        avgKmh < AppConstants.minAvgSpeedKmh) {
+      await _saveRun();
+      state = state.copyWith(
+        isCapturing: false,
+        captureResult: ZoneCaptureResult.invalidSpeed,
+      );
+      return;
+    }
+
     final zones = ref.read(zonesProvider).valueOrNull ?? const [];
     final inside = zones
         .where((z) => _pointInPolygon(z.centroid, polygon))
@@ -243,9 +273,12 @@ class RunNotifier extends Notifier<RunState> {
         .compareTo(_distance(center, b.centroid)));
     final zone = inside.first;
 
-    final result = await ref
-        .read(zoneCaptureServiceProvider)
-        .attemptCapture(runnerPolygon: polygon, zone: zone);
+    final result = await ref.read(zoneCaptureServiceProvider).attemptCapture(
+          runnerPolygon: polygon,
+          zone: zone,
+          distanceMeters: state.distanceMeters,
+          durationSeconds: state.durationSeconds,
+        );
 
     await _saveRun(
       capturedZoneId: result == ZoneCaptureResult.success ? zone.id : null,
@@ -283,6 +316,18 @@ class RunNotifier extends Notifier<RunState> {
         .set(run.toFirestore());
 
     state = state.copyWith(lastSaved: run);
+
+    // Suma los km de esta carrera al total del usuario. Dispara onUserStatsWritten
+    // en el servidor, que recalcula los totales del club. (Las reglas permiten
+    // que el usuario edite su propio totalKm.)
+    if (state.distanceMeters > 0) {
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(uid).update({
+          'totalKm':    FieldValue.increment(state.distanceMeters / 1000),
+          'lastActive': FieldValue.serverTimestamp(),
+        });
+      } catch (_) {/* la carrera ya quedó guardada; no bloquear por esto */}
+    }
   }
 
   // Ajustes de localización con servicio en primer plano: el GPS sigue

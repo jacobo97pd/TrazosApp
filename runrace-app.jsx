@@ -143,7 +143,7 @@ function SplashScreen() {
       <div style={{ width: 80, height: 80, borderRadius: 22, background: "linear-gradient(135deg, #FF4D6D, #FF8C00)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36 }}>
         🏃
       </div>
-      <div style={{ color: "#F0F0F5", fontSize: 32, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", letterSpacing: -1 }}>RunRace</div>
+      <div style={{ color: "#F0F0F5", fontSize: 32, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", letterSpacing: -1 }}>Trazos</div>
       <div style={{ color: "rgba(240,240,245,0.45)", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>Conquista tu ciudad</div>
       <div style={{ marginTop: 40, width: 40, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.1)", overflow: "hidden" }}>
         <div style={{ height: "100%", background: "#FF4D6D", borderRadius: 2, animation: "load 2s linear forwards" }} />
@@ -217,7 +217,7 @@ function MapScreen({ zones, capturedZones, selectedZone, setSelectedZone, onStar
     <div style={{ background: "var(--bg)", minHeight: "100vh", paddingBottom: 80 }}>
       <div style={{ padding: "16px 16px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <div style={{ color: "var(--muted)", fontSize: 11, fontWeight: 500, textTransform: "uppercase", letterSpacing: 1 }}>RunRace</div>
+          <div style={{ color: "var(--muted)", fontSize: 11, fontWeight: 500, textTransform: "uppercase", letterSpacing: 1 }}>Trazos</div>
           <div style={{ color: "var(--text)", fontSize: 20, fontWeight: 700, letterSpacing: -0.5 }}>Madrid</div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>

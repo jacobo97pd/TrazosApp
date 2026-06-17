@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * RunRace — Seed de zonas de Madrid en Firestore
+ * Trazos — Seed de zonas de Madrid en Firestore
  *
  * Uso:
  *   node scripts/seed_zones_madrid.js \
@@ -463,7 +463,7 @@ async function seed() {
   const total    = ZONES_RAW.length;
   const zonesRef = db.collection('zones');
 
-  console.log('\n🏃  RunRace — Seed de zonas de Madrid');
+  console.log('\n🏃  Trazos — Seed de zonas de Madrid');
   console.log(`    Proyecto : ${PROJECT_ID}`);
   console.log(`    Zonas    : ${total}`);
   console.log(`    Limpiar  : ${CLEAR ? 'sí' : 'no'}\n`);

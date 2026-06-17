@@ -18,11 +18,11 @@ class AuthScreen extends ConsumerStatefulWidget {
 }
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
-  final _formKey    = GlobalKey<FormState>();
-  final _emailCtrl  = TextEditingController();
-  final _passCtrl   = TextEditingController();
-  final _nameCtrl   = TextEditingController();
-  _AuthMode _mode   = _AuthMode.signIn;
+  final _formKey = GlobalKey<FormState>();
+  final _emailCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  final _nameCtrl = TextEditingController();
+  _AuthMode _mode = _AuthMode.signIn;
   bool _obscurePass = true;
 
   @override
@@ -41,8 +41,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       await notifier.signInWithEmail(_emailCtrl.text, _passCtrl.text);
     } else {
       await notifier.signUpWithEmail(
-        email:       _emailCtrl.text,
-        password:    _passCtrl.text,
+        email: _emailCtrl.text,
+        password: _passCtrl.text,
         displayName: _nameCtrl.text.trim(),
       );
     }
@@ -51,7 +51,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     final authState = ref.read(authNotifierProvider);
     authState.whenOrNull(
       error: (e, _) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: AppColors.accent),
+        SnackBar(
+            content: Text(e.toString()), backgroundColor: AppColors.accent),
       ),
     );
   }
@@ -63,13 +64,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       final started = await ref.read(stravaServiceProvider).signInWithStrava();
       if (!started && !kIsWeb && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Inicio de sesión con Strava cancelado.')),
+          const SnackBar(
+              content: Text('Inicio de sesión con Strava cancelado.')),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error con Strava: $e'),
+          SnackBar(
+              content: Text('Error con Strava: $e'),
               backgroundColor: AppColors.accent),
         );
       }
@@ -82,7 +85,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     // El listener de authState navega al mapa si entra; aquí solo mostramos error.
     ref.read(authNotifierProvider).whenOrNull(
           error: (e, _) => ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error con Google: $e'),
+            SnackBar(
+                content: Text('Error con Google: $e'),
                 backgroundColor: AppColors.accent),
           ),
         );
@@ -107,7 +111,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 24),
-                Text('Bienvenido a\nRunRace', style: AppTextStyles.displayLarge),
+                Text('Bienvenido a\nTrazos', style: AppTextStyles.displayLarge),
                 const SizedBox(height: 8),
                 Text(
                   _mode == _AuthMode.signIn
@@ -126,8 +130,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       labelText: 'Tu nombre',
                       prefixIcon: Icon(Icons.person_outline),
                     ),
-                    validator: (v) =>
-                        (v == null || v.trim().length < 2) ? 'Mínimo 2 caracteres' : null,
+                    validator: (v) => (v == null || v.trim().length < 2)
+                        ? 'Mínimo 2 caracteres'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -139,8 +144,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     labelText: 'Email',
                     prefixIcon: Icon(Icons.email_outlined),
                   ),
-                  validator: (v) =>
-                      (v == null || !v.contains('@')) ? 'Email no válido' : null,
+                  validator: (v) => (v == null || !v.contains('@'))
+                      ? 'Email no válido'
+                      : null,
                 ),
                 const SizedBox(height: 16),
 
@@ -154,11 +160,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       icon: Icon(_obscurePass
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined),
-                      onPressed: () => setState(() => _obscurePass = !_obscurePass),
+                      onPressed: () =>
+                          setState(() => _obscurePass = !_obscurePass),
                     ),
                   ),
-                  validator: (v) =>
-                      (v == null || v.length < 6) ? 'Mínimo 6 caracteres' : null,
+                  validator: (v) => (v == null || v.length < 6)
+                      ? 'Mínimo 6 caracteres'
+                      : null,
                 ),
                 const SizedBox(height: 28),
 
@@ -166,10 +174,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   onPressed: isLoading ? null : _submit,
                   child: isLoading
                       ? const SizedBox(
-                          height: 22, width: 22,
+                          height: 22,
+                          width: 22,
                           child: CircularProgressIndicator(
                               strokeWidth: 2.5, color: Colors.white))
-                      : Text(_mode == _AuthMode.signIn ? 'Iniciar sesión' : 'Crear cuenta'),
+                      : Text(_mode == _AuthMode.signIn
+                          ? 'Iniciar sesión'
+                          : 'Crear cuenta'),
                 ),
                 const SizedBox(height: 16),
 
@@ -191,7 +202,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   label: const Text('Iniciar sesión con Strava'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFFFC4C02), // naranja Strava
-                    side: const BorderSide(color: Color(0xFFFC4C02), width: 1.5),
+                    side:
+                        const BorderSide(color: Color(0xFFFC4C02), width: 1.5),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -211,9 +223,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 // Toggle modo
                 Center(
                   child: TextButton(
-                    onPressed: () => setState(() => _mode = _mode == _AuthMode.signIn
-                        ? _AuthMode.signUp
-                        : _AuthMode.signIn),
+                    onPressed: () => setState(() => _mode =
+                        _mode == _AuthMode.signIn
+                            ? _AuthMode.signUp
+                            : _AuthMode.signIn),
                     child: Text(
                       _mode == _AuthMode.signIn
                           ? '¿Sin cuenta? Regístrate'
