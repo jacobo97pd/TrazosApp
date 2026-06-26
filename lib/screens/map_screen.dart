@@ -14,6 +14,7 @@ import '../core/router.dart';
 import '../core/theme.dart';
 import '../data/mock_runners.dart';
 import '../providers/zones_provider.dart';
+import '../services/permissions_service.dart';
 
 // Camara por defecto (Madrid) hasta tener la ubicacion del usuario.
 const _defaultCameraPosition = CameraPosition(
@@ -65,6 +66,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   // Sigue la ubicación del usuario para mover el puntero (ligero, filtro 8 m).
   Future<void> _startUserTracking() async {
     try {
+      // Pide explícitamente ubicación + notificaciones (diálogos del sistema).
+      await PermissionsService.requestCorePermissions();
+
       final permission = await Geolocator.checkPermission();
       final resolved = permission == LocationPermission.denied
           ? await Geolocator.requestPermission()

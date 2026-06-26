@@ -28,20 +28,24 @@
 	<true/>
 
 	<!-- ── Localización ─────────────────────────────────────────────────── -->
+	<key>NSLocationUsageDescription</key>
+	<string>Trazos necesita tu ubicacion para trazar tu ruta y capturar zonas mientras corres.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Trazos necesita tu ubicación para trazar tu ruta y capturar zonas mientras corres.</string>
+	<string>Trazos necesita tu ubicacion para trazar tu ruta y capturar zonas mientras corres.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Trazos rastrea tu posición en background para que puedas capturar zonas con la pantalla apagada.</string>
+	<string>Trazos usa tu ubicacion en segundo plano para registrar tu carrera aunque bloquees el movil.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>Trazos rastrea tu posición en background para que puedas capturar zonas con la pantalla apagada.</string>
+	<string>Trazos usa tu ubicacion en segundo plano para registrar tu carrera aunque bloquees el movil.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Trazos necesita acceder a tus fotos si eliges una imagen para tu perfil o club.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Trazos necesita acceder a la camara si decides hacer una foto para tu perfil o club.</string>
 
 	<!-- ── Background modes ─────────────────────────────────────────────── -->
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
-		<string>fetch</string>
 		<string>remote-notification</string>
-		<string>processing</string>
 	</array>
 
 	<!-- ── Google Maps API key — sustituir MAPS_API_KEY_PLACEHOLDER ──────── -->

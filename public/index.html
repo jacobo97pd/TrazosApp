@@ -1,89 +1,360 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Welcome to Firebase Hosting</title>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trazos | Running gamificado para conquistar la ciudad</title>
+  <meta name="description" content="Trazos convierte tus carreras en una competicion por zonas. Corre, captura calles, defiende territorios y compite con RunClubs en el mapa." />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="theme-color" content="#0b0c12" />
+  <meta name="author" content="Trazos" />
+  <link rel="canonical" href="https://trazos-database.web.app/" />
+  <link rel="icon" href="/assets/trazos-logo.png" type="image/png" />
+  <link rel="apple-touch-icon" href="/assets/trazos-logo.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <link rel="preload" href="/assets/trazos-logo.png" as="image" />
+  <link rel="stylesheet" href="/site.css" />
 
-    <!-- update the version number as needed -->
-    <script defer src="/__/firebase/12.14.0/firebase-app-compat.js"></script>
-    <!-- include only the Firebase features as you need -->
-    <script defer src="/__/firebase/12.14.0/firebase-auth-compat.js"></script>
-    <script defer src="/__/firebase/12.14.0/firebase-database-compat.js"></script>
-    <script defer src="/__/firebase/12.14.0/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/12.14.0/firebase-functions-compat.js"></script>
-    <script defer src="/__/firebase/12.14.0/firebase-messaging-compat.js"></script>
-    <script defer src="/__/firebase/12.14.0/firebase-storage-compat.js"></script>
-    <script defer src="/__/firebase/12.14.0/firebase-analytics-compat.js"></script>
-    <script defer src="/__/firebase/12.14.0/firebase-remote-config-compat.js"></script>
-    <script defer src="/__/firebase/12.14.0/firebase-performance-compat.js"></script>
-    <!-- 
-      initialize the SDK after all desired features are loaded, set useEmulator to false
-      to avoid connecting the SDK to running emulators.
-    -->
-    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Trazos" />
+  <meta property="og:title" content="Trazos | Conquista la ciudad corriendo" />
+  <meta property="og:description" content="Una app de running gamificado donde cada ruta puede capturar zonas, mover rankings y cambiar el mapa de tu club." />
+  <meta property="og:url" content="https://trazos-database.web.app/" />
+  <meta property="og:image" content="https://trazos-database.web.app/assets/trazos-logo.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Trazos | Running gamificado" />
+  <meta name="twitter:description" content="Corre, captura zonas y compite con RunClubs por dominar el mapa." />
+  <meta name="twitter:image" content="https://trazos-database.web.app/assets/trazos-logo.png" />
 
-    <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
-      @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
-      }
-    </style>
-  </head>
-  <body>
-    <div id="message">
-      <h2>Welcome</h2>
-      <h1>Firebase Hosting Setup Complete</h1>
-      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
-      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
-    </div>
-    <p id="load">Firebase SDK Loading&hellip;</p>
-
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const loadEl = document.querySelector('#load');
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-        // // The Firebase SDK is initialized and available here!
-        //
-        // firebase.auth().onAuthStateChanged(user => { });
-        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-        // firebase.firestore().doc('/foo/bar').get().then(() => { });
-        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
-        // firebase.messaging().requestPermission().then(() => { });
-        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-        // firebase.analytics(); // call to activate
-        // firebase.analytics().logEvent('tutorial_completed');
-        // firebase.performance(); // call to activate
-        //
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-
-        try {
-          let app = firebase.app();
-          let features = [
-            'auth', 
-            'database', 
-            'firestore',
-            'functions',
-            'messaging', 
-            'storage', 
-            'analytics', 
-            'remoteConfig',
-            'performance',
-          ].filter(feature => typeof app[feature] === 'function');
-          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
-        } catch (e) {
-          console.error(e);
-          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://trazos-database.web.app/#organization",
+        "name": "Trazos",
+        "url": "https://trazos-database.web.app/",
+        "logo": "https://trazos-database.web.app/assets/trazos-logo.png",
+        "email": "soporte.trazos.app@gmail.com"
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://trazos-database.web.app/#website",
+        "url": "https://trazos-database.web.app/",
+        "name": "Trazos",
+        "publisher": { "@id": "https://trazos-database.web.app/#organization" },
+        "inLanguage": "es"
+      },
+      {
+        "@type": "MobileApplication",
+        "@id": "https://trazos-database.web.app/#app",
+        "name": "Trazos",
+        "applicationCategory": "SportsApplication",
+        "operatingSystem": "Android, iOS",
+        "description": "App de running gamificado para capturar zonas, competir en rankings y jugar con RunClubs sobre un mapa real.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "EUR"
         }
-      });
-    </script>
-  </body>
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://trazos-database.web.app/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Como funciona Trazos?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Trazos registra tus carreras con GPS, dibuja tu recorrido y calcula las zonas que conquistas segun tu actividad."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Puedo competir con un club?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Si. La app esta pensada para que usuarios y RunClubs compitan por capturar y defender zonas del mapa."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Necesito pagar para usar la web?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "La web informativa puede publicarse como sitio estatico en Firebase Hosting usando el plan gratuito mientras se respeten sus cuotas."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Saltar al contenido</a>
+
+  <header class="site-header" data-header>
+    <nav class="nav" aria-label="Navegacion principal">
+      <a class="brand" href="/" aria-label="Trazos inicio">
+        <img src="/assets/trazos-logo.png" width="40" height="40" alt="" />
+        <span>Trazos</span>
+      </a>
+
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu" data-nav-toggle>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span class="sr-only">Abrir menu</span>
+      </button>
+
+      <div class="nav-menu" id="nav-menu" data-nav-menu>
+        <a href="#competicion">Competicion</a>
+        <a href="#mapa">Mapa</a>
+        <a href="#clubs">RunClubs</a>
+        <a href="#faq">FAQ</a>
+      </div>
+
+      <a class="nav-cta" href="mailto:soporte.trazos.app@gmail.com?subject=Quiero%20probar%20Trazos">Solicitar acceso</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <canvas id="city-canvas" class="hero-canvas" aria-hidden="true"></canvas>
+      <div class="hero-vignette" aria-hidden="true"></div>
+
+      <div class="hero-content">
+        <p class="eyebrow reveal">Running gamificado sobre mapa real</p>
+        <h1 id="hero-title" class="hero-title reveal">TRAZOS</h1>
+        <p class="hero-copy reveal">
+          Corre por tu ciudad, pinta tus rutas, conquista zonas y convierte cada salida en una batalla deportiva entre usuarios y RunClubs.
+        </p>
+
+        <div class="hero-actions reveal" aria-label="Acciones principales">
+          <a class="button button-primary" href="mailto:soporte.trazos.app@gmail.com?subject=Quiero%20entrar%20en%20la%20beta%20de%20Trazos">
+            Entrar en beta
+          </a>
+          <a class="button button-ghost" href="#mapa">Ver como funciona</a>
+        </div>
+
+        <dl class="hero-metrics reveal" aria-label="Datos destacados de Trazos">
+          <div>
+            <dt data-counter="128">0</dt>
+            <dd>Zonas activas</dd>
+          </div>
+          <div>
+            <dt data-counter="10">0</dt>
+            <dd>Runners demo</dd>
+          </div>
+          <div>
+            <dt data-counter="24">0</dt>
+            <dd>Retos por ciudad</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="section section-tight intro-band" aria-label="Resumen">
+      <div class="section-inner intro-grid">
+        <p class="section-kicker reveal">La calle como tablero</p>
+        <h2 class="section-title reveal">Una experiencia deportiva que se siente como una competicion real.</h2>
+        <p class="section-copy reveal">
+          Trazos mezcla GPS, rankings, clubes y zonas urbanas para que correr tenga progreso, rivalidad y motivo para volver manana.
+        </p>
+      </div>
+    </section>
+
+    <section class="section" id="competicion" aria-labelledby="competition-title">
+      <div class="section-inner">
+        <div class="section-heading">
+          <p class="section-kicker reveal">Competicion viva</p>
+          <h2 id="competition-title" class="section-title reveal">Ranking, territorio y presion de club.</h2>
+          <p class="section-copy reveal">
+            Cada carrera suma kilometros, zonas y defensa territorial. El mapa deja de ser fondo y pasa a ser marcador.
+          </p>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-card reveal">
+            <span class="feature-icon">01</span>
+            <h3>Captura zonas</h3>
+            <p>Tu recorrido se convierte en trazos sobre el mapa y puede reclamar areas disputadas.</p>
+          </article>
+          <article class="feature-card reveal">
+            <span class="feature-icon">02</span>
+            <h3>Defiende territorio</h3>
+            <p>Si otro corredor cruza tus zonas, la batalla se actualiza y el control puede cambiar.</p>
+          </article>
+          <article class="feature-card reveal">
+            <span class="feature-icon">03</span>
+            <h3>Sube en ranking</h3>
+            <p>RunClubs y runners compiten por zonas, kilometros y dominio visual de la ciudad.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section demo-section" id="mapa" aria-labelledby="map-title">
+      <div class="section-inner demo-layout">
+        <div class="demo-copy">
+          <p class="section-kicker reveal">GPS y trazos</p>
+          <h2 id="map-title" class="section-title reveal">Sales a correr. La ciudad empieza a cambiar.</h2>
+          <p class="section-copy reveal">
+            Durante la actividad, Trazos registra puntos GPS, dibuja el recorrido y calcula las zonas que atraviesas para convertir esfuerzo real en control del mapa.
+          </p>
+          <ul class="check-list reveal">
+            <li>Rutas pintadas en tiempo real mientras corres.</li>
+            <li>Zonas con control visual por usuario o RunClub.</li>
+            <li>Modo competitivo preparado para robar o defender territorio.</li>
+          </ul>
+        </div>
+
+        <div class="phone-stage reveal" aria-label="Vista simulada de la app Trazos">
+          <div class="phone">
+            <div class="phone-top">
+              <span>TRAZOS</span>
+              <small>Madrid Centro</small>
+            </div>
+            <div class="phone-map">
+              <div class="map-line line-a"></div>
+              <div class="map-line line-b"></div>
+              <div class="zone zone-one"></div>
+              <div class="zone zone-two"></div>
+              <div class="zone zone-three"></div>
+              <div class="runner-dot"></div>
+            </div>
+            <div class="run-panel">
+              <span>4.82 km</span>
+              <strong>Capturando Lavapies</strong>
+              <button type="button">Correr</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section ranking-section" id="clubs" aria-labelledby="ranking-title">
+      <div class="section-inner ranking-layout">
+        <div class="section-heading">
+          <p class="section-kicker reveal">RunClubs</p>
+          <h2 id="ranking-title" class="section-title reveal">Un ranking con sabor a liga.</h2>
+          <p class="section-copy reveal">
+            El objetivo no es solo correr mas. Es conquistar mejor, defender mas tiempo y aparecer arriba cuando todos miran el tablero.
+          </p>
+        </div>
+
+        <div class="leaderboard reveal" data-leaderboard>
+          <div class="leaderboard-tabs" role="tablist" aria-label="Tipo de ranking">
+            <button class="is-active" type="button" role="tab" aria-selected="true" data-board-tab="clubs">RunClubs</button>
+            <button type="button" role="tab" aria-selected="false" data-board-tab="solo">Solos</button>
+          </div>
+
+          <ol class="podium" aria-label="Podium de muestra">
+            <li>
+              <span class="medal silver">2</span>
+              <strong data-rank-name="second">Lavapies Crew</strong>
+              <small data-rank-score="second">22 zonas</small>
+            </li>
+            <li class="winner">
+              <span class="medal gold">1</span>
+              <strong data-rank-name="first">Centro Runners</strong>
+              <small data-rank-score="first">31 zonas</small>
+            </li>
+            <li>
+              <span class="medal bronze">3</span>
+              <strong data-rank-name="third">Retiro Norte</strong>
+              <small data-rank-score="third">18 zonas</small>
+            </li>
+          </ol>
+
+          <div class="rank-list" aria-label="Resto del ranking">
+            <div class="rank-row">
+              <span>4</span>
+              <strong data-list-name="0">Malasana Track</strong>
+              <small data-list-score="0">15 zonas - 68 km</small>
+            </div>
+            <div class="rank-row">
+              <span>5</span>
+              <strong data-list-name="1">Chamberi Pace</strong>
+              <small data-list-score="1">13 zonas - 54 km</small>
+            </div>
+            <div class="rank-row">
+              <span>6</span>
+              <strong data-list-name="2">Atocha Sprint</strong>
+              <small data-list-score="2">11 zonas - 49 km</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section cta-section" id="beta" aria-labelledby="cta-title">
+      <div class="section-inner cta-layout">
+        <div>
+          <p class="section-kicker reveal">Beta privada</p>
+          <h2 id="cta-title" class="section-title reveal">Lanza tu ciudad antes que nadie.</h2>
+          <p class="section-copy reveal">
+            Estamos preparando Trazos para corredores, grupos y clubes que quieren competir de una forma nueva: con la calle como marcador.
+          </p>
+        </div>
+        <a class="button button-primary reveal" href="mailto:soporte.trazos.app@gmail.com?subject=Quiero%20probar%20Trazos">
+          Pedir acceso
+        </a>
+      </div>
+    </section>
+
+    <section class="section faq-section" id="faq" aria-labelledby="faq-title">
+      <div class="section-inner faq-layout">
+        <div>
+          <p class="section-kicker reveal">Preguntas rapidas</p>
+          <h2 id="faq-title" class="section-title reveal">Lo esencial antes de salir a correr.</h2>
+        </div>
+
+        <div class="faq-list">
+          <article class="faq-item reveal">
+            <button type="button" aria-expanded="false">
+              Como registra mis carreras?
+              <span></span>
+            </button>
+            <p>La app usa GPS durante la actividad para guardar puntos del recorrido y dibujar el trazo sobre el mapa. Con esos puntos calcula distancia y zonas atravesadas.</p>
+          </article>
+          <article class="faq-item reveal">
+            <button type="button" aria-expanded="false">
+              Puedo quitar zonas a otros corredores?
+              <span></span>
+            </button>
+            <p>La experiencia esta planteada como conquista y defensa: si una zona deja de pertenecer a un usuario o club, el ranking y el mapa pueden actualizar el control.</p>
+          </article>
+          <article class="faq-item reveal">
+            <button type="button" aria-expanded="false">
+              Trazos funciona para clubes?
+              <span></span>
+            </button>
+            <p>Si. Los RunClubs pueden competir como equipo y convertir sus entrenamientos en territorio compartido.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <a class="brand" href="/">
+        <img src="/assets/trazos-logo.png" width="34" height="34" alt="" />
+        <span>Trazos</span>
+      </a>
+      <div class="footer-links">
+        <a href="/privacy.html">Privacidad</a>
+        <a href="/delete-account.html">Eliminar cuenta</a>
+        <a href="mailto:soporte.trazos.app@gmail.com">Contacto</a>
+      </div>
+      <p>&copy; 2026 Trazos. Running gamificado.</p>
+    </div>
+  </footer>
+
+  <script defer src="/site.js"></script>
+</body>
 </html>
