@@ -60,7 +60,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '756598503122',
     projectId: 'trazos-database',
     storageBucket: 'trazos-database.firebasestorage.app',
-    iosBundleId: 'com.trazos.app',
+    iosBundleId: 'com.jpedrero.trazos',
   );
 
   static const FirebaseOptions web = FirebaseOptions(

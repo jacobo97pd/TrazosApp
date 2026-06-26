@@ -11,9 +11,9 @@ workflows:
       cocoapods: default
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.trazos.app
+        bundle_identifier: com.jpedrero.trazos
       vars:
-        BUNDLE_ID: com.trazos.app
+        BUNDLE_ID: com.jpedrero.trazos
     scripts:
       - name: Disable Flutter Swift Package Manager
         script: |
