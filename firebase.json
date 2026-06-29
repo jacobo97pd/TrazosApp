@@ -87,6 +87,12 @@
           }
         ]
       }
+    ],
+    "rewrites": [
+      {
+        "source": "/strava-callback",
+        "destination": "/strava-callback.html"
+      }
     ]
   }
 }

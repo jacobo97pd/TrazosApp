@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Volviendo a Trazos</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body {
+        align-items: center;
+        background: #f7f5ef;
+        color: #20201d;
+        display: flex;
+        justify-content: center;
+        margin: 0;
+        min-height: 100vh;
+        padding: 24px;
+        text-align: center;
+      }
+
+      main {
+        max-width: 420px;
+      }
+
+      h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0 0 12px;
+      }
+
+      p {
+        color: #5b5b52;
+        font-size: 16px;
+        line-height: 1.5;
+        margin: 0 0 20px;
+      }
+
+      a {
+        color: #fc4c02;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Volviendo a Trazos</h1>
+      <p>Estamos terminando la conexion con Strava. Si la app no se abre sola, usa el enlace.</p>
+      <a id="open-app" href="/">Abrir Trazos</a>
+    </main>
+    <script>
+      (function () {
+        var suffix = window.location.search || "";
+        var hash = window.location.hash || "";
+        var deepLink = "runrace://trazos-database.web.app/strava-callback" + suffix + hash;
+        var link = document.getElementById("open-app");
+
+        link.href = deepLink;
+        window.location.replace(deepLink);
+      }());
+    </script>
+  </body>
+</html>

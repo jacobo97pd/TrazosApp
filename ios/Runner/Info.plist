@@ -55,11 +55,17 @@
 	<!-- ── Google Maps API key — sustituir MAPS_API_KEY_PLACEHOLDER ──────── -->
 	<key>GMSApiKey</key>
 	<string>AIzaSyAkhsIsC8p7SBcw8bRl2q2ey-k26Ck_QDQ</string>
+	<key>GIDClientID</key>
+	<string>756598503122-hocqseqqlbtau0nrdpgjsdktcqivfad2.apps.googleusercontent.com</string>
+	<key>GIDServerClientID</key>
+	<string>756598503122-e1lggntuvmipvm3reafeu1dfkfgrtfg6.apps.googleusercontent.com</string>
 
 	<!-- ── Deep-link Strava OAuth callback ──────────────────────────────── -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
 			<key>CFBundleURLName</key>
 			<string>com.googleusercontent.apps.756598503122-hocqseqqlbtau0nrdpgjsdktcqivfad2</string>
 			<key>CFBundleURLSchemes</key>
