@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants.dart';
 import '../core/theme.dart';
-import '../data/mock_runners.dart';
 import '../models/club_model.dart';
 import '../models/user_model.dart';
 
@@ -172,7 +171,6 @@ class _SoloRankingTab extends ConsumerWidget {
       data: (users) {
         final entries = _sortEntries([
           ...users.map(_entryFromUser),
-          ...mockRunners.map(_entryFromMockRunner),
         ]);
         return _RankingContent(entries: entries);
       },
@@ -1241,19 +1239,6 @@ RankingEntry _entryFromUser(UserModel user) {
     initials: _initials(name),
     accentColor: AppColors.accent,
     imageUrl: user.photoUrl,
-  );
-}
-
-RankingEntry _entryFromMockRunner(MockRunner runner) {
-  return RankingEntry(
-    id: runner.id,
-    name: runner.name,
-    subtitle: '${runner.subtitle} · Nivel ${runner.level}',
-    zones: runner.zones,
-    km: runner.km,
-    score: _scoreFor(runner.zones, runner.km),
-    initials: _initials(runner.name),
-    accentColor: runner.color,
   );
 }
 

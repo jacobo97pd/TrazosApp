@@ -12,7 +12,6 @@ import 'package:go_router/go_router.dart';
 
 import '../core/router.dart';
 import '../core/theme.dart';
-import '../data/mock_runners.dart';
 import '../providers/zones_provider.dart';
 import '../services/permissions_service.dart';
 
@@ -21,10 +20,6 @@ const _defaultCameraPosition = CameraPosition(
   target: LatLng(40.4168, -3.7038),
   zoom: 14.5,
 );
-
-// Mientras existan rutas mock de demo, mantenemos la camara sobre Madrid centro
-// para que los trazos se vean y no haya salto automatico a la ubicacion real.
-const _showMockRoutes = true;
 
 // Estilo del puntero de ubicación. `runner` = icono propio (se genera en código);
 // `dot` = punto azul por defecto de Google. Cambia esta constante para alternar.
@@ -142,8 +137,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   Future<void> _prepareMap() async {
     final styleFuture = rootBundle.loadString('assets/map_style_dark.json');
-    final cameraFuture =
-        _showMockRoutes ? Future.value(_defaultCameraPosition) : _userCamera();
+    final cameraFuture = _userCamera();
 
     final style = await styleFuture;
     final camera = await cameraFuture;
@@ -186,20 +180,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   Widget build(BuildContext context) {
     final polygons = ref.watch(mapPolygonsProvider);
-    final mockPolylines = {
-      if (_showMockRoutes)
-        for (final runner in mockRunners)
-          Polyline(
-            polylineId: PolylineId('mock-route-${runner.id}'),
-            points: runner.route,
-            color: runner.color.withValues(alpha: 0.42),
-            width: 3,
-            jointType: JointType.round,
-            startCap: Cap.roundCap,
-            endCap: Cap.roundCap,
-            zIndex: 0,
-          ),
-    };
     final mapReady = _darkMapStyle != null && _initialCameraPosition != null;
 
     return Scaffold(
@@ -212,7 +192,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   onMapCreated: _onMapCreated,
                   style: _darkMapStyle,
                   polygons: polygons,
-                  polylines: mockPolylines,
                   markers: {
                     if (_pointerStyle == _Pointer.runner &&
                         _userLatLng != null &&
