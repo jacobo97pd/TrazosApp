@@ -60,7 +60,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="runrace"
-                    android:host="strava-callback" />
+                    android:host="trazos-database.web.app"
+                    android:path="/strava-callback" />
             </intent-filter>
         </activity>
 
@@ -92,6 +93,11 @@
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
+        </intent>
+        <!-- url_launcher: detectar si la app de Strava está instalada -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="strava" />
         </intent>
         <!-- Procesamiento de texto (plantilla Flutter) -->
         <intent>

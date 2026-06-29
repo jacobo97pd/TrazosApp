@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>strava</string>
+	</array>
 
 	<!-- ── Localización ─────────────────────────────────────────────────── -->
 	<key>NSLocationUsageDescription</key>
@@ -55,6 +59,14 @@
 	<!-- ── Deep-link Strava OAuth callback ──────────────────────────────── -->
 	<key>CFBundleURLTypes</key>
 	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.googleusercontent.apps.756598503122-hocqseqqlbtau0nrdpgjsdktcqivfad2</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.756598503122-hocqseqqlbtau0nrdpgjsdktcqivfad2</string>
+			</array>
+		</dict>
 		<dict>
 			<key>CFBundleURLName</key>
 			<string>com.jpedrero.trazos.strava</string>

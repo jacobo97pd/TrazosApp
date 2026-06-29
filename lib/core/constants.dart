@@ -30,7 +30,10 @@ abstract final class AppConstants {
   // NO se guarda en el cliente: vive como secreto en las Cloud Functions
   // (STRAVA_CLIENT_SECRET), que hacen el intercambio code→token de forma segura.
   static const String stravaClientId          = '255245';
-  static const String stravaRedirectUri       = 'runrace://strava-callback';
+  static const String stravaRedirectUri       =
+      'runrace://trazos-database.web.app/strava-callback';
+  static const String stravaCallbackHost      = 'trazos-database.web.app';
+  static const String stravaCallbackPath      = '/strava-callback';
   static const String stravaScope             = 'read,activity:write,activity:read_all';
 
   // Deep-link scheme

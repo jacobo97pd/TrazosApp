@@ -56,7 +56,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyAb2xgV4w1L_mP80toB3E_W-wpegQLwit4',
-    appId: '1:756598503122:ios:14a326ffd498d770d05f0b',
+    appId: '1:756598503122:ios:b3bdcad620ee67ddd05f0b',
     messagingSenderId: '756598503122',
     projectId: 'trazos-database',
     storageBucket: 'trazos-database.firebasestorage.app',
@@ -72,5 +72,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'trazos-database.firebasestorage.app',
     measurementId: 'G-KMPS4DM8CC',
   );
-
 }

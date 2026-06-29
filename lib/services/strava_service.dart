@@ -51,7 +51,7 @@ class StravaService {
   // Flujo:
   //   1. Suscribirse al stream de deep-links ANTES de abrir el navegador
   //   2. Abrir la URL OAuth de Strava en el navegador externo
-  //   3. Esperar el callback runrace://strava-callback?code=XXX (5 min timeout)
+  //   3. Esperar el callback runrace://trazos-database.web.app/strava-callback?code=XXX
   //   4. Llamar a la Cloud Function exchangeStravaToken con el code
   //   5. Guardar tokens en SecureStorage + stravaId en Firestore
   //   6. Devolver StravaTokenData o null si el usuario canceló
@@ -63,7 +63,9 @@ class StravaService {
   }
 
   bool _isStravaCallback(Uri uri) =>
-      uri.scheme == AppConstants.appScheme && uri.host == 'strava-callback';
+      uri.scheme == AppConstants.appScheme &&
+      uri.host == AppConstants.stravaCallbackHost &&
+      uri.path == AppConstants.stravaCallbackPath;
 
   // ── "Iniciar sesión con Strava" ──────────────────────────────────────────────
   //
@@ -148,20 +150,54 @@ class StravaService {
   }
 
   // Construye la URL de autorización de Strava.
-  Uri _authorizeUri({required String redirectUri, String? state}) => Uri.parse(
-        'https://www.strava.com/oauth/authorize'
-        '?client_id=${AppConstants.stravaClientId}'
-        '&redirect_uri=${Uri.encodeComponent(redirectUri)}'
-        '&response_type=code'
-        '&approval_prompt=auto'
-        '&scope=${AppConstants.stravaScope}'
-        '${state != null ? '&state=$state' : ''}',
-      );
+  Map<String, String> _authorizeParams({
+    required String redirectUri,
+    String? state,
+  }) =>
+      <String, String>{
+        'client_id': AppConstants.stravaClientId,
+        'redirect_uri': redirectUri,
+        'response_type': 'code',
+        'approval_prompt': 'auto',
+        'scope': AppConstants.stravaScope,
+        if (state != null) 'state': state,
+      };
+
+  Uri _authorizeUri({required String redirectUri, String? state}) {
+    return Uri.https(
+      'www.strava.com',
+      kIsWeb ? '/oauth/authorize' : '/oauth/mobile/authorize',
+      _authorizeParams(redirectUri: redirectUri, state: state),
+    );
+  }
+
+  Uri _nativeAuthorizeUri({required String redirectUri, String? state}) {
+    return Uri(
+      scheme: 'strava',
+      host: 'oauth',
+      path: '/mobile/authorize',
+      queryParameters: _authorizeParams(redirectUri: redirectUri, state: state),
+    );
+  }
+
+  Future<void> _launchMobileOAuth() async {
+    final appUri = _nativeAuthorizeUri(
+      redirectUri: AppConstants.stravaRedirectUri,
+    );
+    final webUri = _authorizeUri(redirectUri: AppConstants.stravaRedirectUri);
+
+    if (await canLaunchUrl(appUri) &&
+        await launchUrl(appUri, mode: LaunchMode.externalApplication)) {
+      return;
+    }
+
+    if (!await launchUrl(webUri, mode: LaunchMode.externalApplication)) {
+      throw Exception('No se pudo abrir el navegador para Strava.');
+    }
+  }
 
   // Móvil: abre Strava y espera el code que llega por deep-link runrace://…
   Future<String?> _awaitCodeMobile() async {
-    final oauthUri = _authorizeUri(redirectUri: AppConstants.stravaRedirectUri);
-
     // Suscribirse al stream antes de abrir el navegador para no perder el callback
     final completer = Completer<String?>();
     StreamSubscription<Uri>? sub;
@@ -185,9 +221,11 @@ class StravaService {
       }),
     );
 
-    if (!await launchUrl(oauthUri, mode: LaunchMode.externalApplication)) {
+    try {
+      await _launchMobileOAuth();
+    } catch (_) {
       await sub.cancel();
-      throw Exception('No se pudo abrir el navegador para Strava.');
+      rethrow;
     }
 
     return completer.future.timeout(

@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -10,6 +11,8 @@ import '../models/user_model.dart';
 // google_sign_in devuelva un idToken válido para Firebase en Android.
 const _googleServerClientId =
     '756598503122-e1lggntuvmipvm3reafeu1dfkfgrtfg6.apps.googleusercontent.com';
+const _googleIosClientId =
+    '756598503122-hocqseqqlbtau0nrdpgjsdktcqivfad2.apps.googleusercontent.com';
 
 // Stream del usuario Firebase Auth
 final authStateProvider = StreamProvider<User?>((ref) {
@@ -27,7 +30,7 @@ final userProfileProvider = StreamProvider.autoDispose<UserModel?>((ref) {
       .doc(uid)
       .withConverter<UserModel>(
         fromFirestore: (snap, _) => UserModel.fromFirestore(snap),
-        toFirestore:   (model, _) => model.toFirestore(),
+        toFirestore: (model, _) => model.toFirestore(),
       )
       .snapshots()
       .map((snap) => snap.data());
@@ -42,7 +45,8 @@ class AuthNotifier extends AsyncNotifier<void> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email.trim(), password: password,
+        email: email.trim(),
+        password: password,
       );
     });
   }
@@ -55,7 +59,8 @@ class AuthNotifier extends AsyncNotifier<void> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email.trim(), password: password,
+        email: email.trim(),
+        password: password,
       );
       await cred.user?.updateDisplayName(displayName);
 
@@ -78,17 +83,16 @@ class AuthNotifier extends AsyncNotifier<void> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       if (kIsWeb) {
-        final cred = await FirebaseAuth.instance
-            .signInWithPopup(GoogleAuthProvider());
+        final cred =
+            await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
         if (cred.user != null) await _ensureUserDoc(cred.user!);
       } else {
-        final googleUser =
-            await GoogleSignIn(serverClientId: _googleServerClientId).signIn();
+        final googleUser = await _mobileGoogleSignIn().signIn();
         if (googleUser == null) return; // el usuario canceló
         final googleAuth = await googleUser.authentication;
         final credential = GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
-          idToken:     googleAuth.idToken,
+          idToken: googleAuth.idToken,
         );
         final cred =
             await FirebaseAuth.instance.signInWithCredential(credential);
@@ -103,10 +107,10 @@ class AuthNotifier extends AsyncNotifier<void> {
     final snap = await ref.get();
     if (snap.exists) return;
     final model = UserModel(
-      uid:         user.uid,
+      uid: user.uid,
       displayName: user.displayName ?? 'Corredor',
-      email:       user.email ?? '',
-      photoUrl:    user.photoURL,
+      email: user.email ?? '',
+      photoUrl: user.photoURL,
     );
     await ref.set(model.toFirestore());
   }
@@ -114,7 +118,7 @@ class AuthNotifier extends AsyncNotifier<void> {
   Future<void> signOut() async {
     if (!kIsWeb) {
       try {
-        await GoogleSignIn().signOut();
+        await _mobileGoogleSignIn().signOut();
       } catch (_) {/* no pasa nada si no había sesión de Google */}
     }
     await FirebaseAuth.instance.signOut();
@@ -125,4 +129,15 @@ class AuthNotifier extends AsyncNotifier<void> {
   }
 }
 
-final authNotifierProvider = AsyncNotifierProvider<AuthNotifier, void>(AuthNotifier.new);
+final authNotifierProvider =
+    AsyncNotifierProvider<AuthNotifier, void>(AuthNotifier.new);
+
+GoogleSignIn _mobileGoogleSignIn() {
+  final isApplePlatform = defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+
+  return GoogleSignIn(
+    clientId: isApplePlatform ? _googleIosClientId : null,
+    serverClientId: _googleServerClientId,
+  );
+}
