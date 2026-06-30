@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:confetti/confetti.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,6 +9,7 @@ import '../core/constants.dart';
 import '../providers/run_provider.dart';
 import '../providers/zones_provider.dart';
 import '../services/zone_capture_service.dart';
+import '../widgets/adaptive_map.dart';
 
 class RunScreen extends ConsumerStatefulWidget {
   const RunScreen({super.key});
@@ -19,7 +19,7 @@ class RunScreen extends ConsumerStatefulWidget {
 }
 
 class _RunScreenState extends ConsumerState<RunScreen> {
-  GoogleMapController? _mapController;
+  final _mapController = AdaptiveMapController();
   late final ConfettiController _confetti;
 
   @override
@@ -34,14 +34,8 @@ class _RunScreenState extends ConsumerState<RunScreen> {
   @override
   void dispose() {
     _confetti.dispose();
-    _mapController?.dispose();
+    _mapController.dispose();
     super.dispose();
-  }
-
-  void _onMapCreated(GoogleMapController c) => _mapController = c;
-
-  void _followUser(LatLng pos) {
-    _mapController?.animateCamera(CameraUpdate.newLatLng(pos));
   }
 
   Future<void> _finish() async {
@@ -57,7 +51,9 @@ class _RunScreenState extends ConsumerState<RunScreen> {
 
     // Seguir al usuario en el mapa
     ref.listen(runProvider.select((s) => s.currentPosition), (_, pos) {
-      if (pos != null) _followUser(pos);
+      if (pos != null) {
+        _mapController.animateTo(MapPoint(pos.latitude, pos.longitude));
+      }
     });
 
     // Confeti al capturar con éxito
@@ -65,28 +61,28 @@ class _RunScreenState extends ConsumerState<RunScreen> {
       if (result == ZoneCaptureResult.success) _confetti.play();
     });
 
-    final polylines = {
+    final lines = [
       if (run.route.length > 1)
-        Polyline(
-          polylineId: const PolylineId('route'),
-          points:     run.route,
-          color:      run.isPolygonClosed ? AppColors.green : AppColors.accent,
-          width:      5,
-          jointType:  JointType.round,
-          startCap:   Cap.roundCap,
-          endCap:     Cap.roundCap,
+        MapLineData(
+          id: 'route',
+          points: [
+            for (final p in run.route) MapPoint(p.latitude, p.longitude),
+          ],
+          color: run.isPolygonClosed ? AppColors.green : AppColors.accent,
+          width: 5,
         ),
-    };
+    ];
 
-    final markers = {
+    final markers = [
       if (run.route.isNotEmpty)
-        Marker(
-          markerId: const MarkerId('start'),
-          position: run.route.first,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-          anchor: const Offset(0.5, 0.5),
+        MapMarkerData(
+          id: 'start',
+          point: MapPoint(run.route.first.latitude, run.route.first.longitude),
+          kind: MapMarkerKind.start,
         ),
-    };
+    ];
+
+    final start = run.currentPosition;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -94,24 +90,17 @@ class _RunScreenState extends ConsumerState<RunScreen> {
         children: [
           // ── Mapa (NO interactivo; la cámara sigue al corredor por código) ──
           IgnorePointer(
-            child: GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: run.currentPosition ?? const LatLng(40.4168, -3.7038),
-                zoom:   16.5,
-              ),
-              onMapCreated:      _onMapCreated,
+            child: AdaptiveMap(
+              controller: _mapController,
+              initialTarget: start != null
+                  ? MapPoint(start.latitude, start.longitude)
+                  : const MapPoint(40.4168, -3.7038),
+              initialZoom: 16.5,
               myLocationEnabled: true,
-              polylines:         polylines,
-              polygons:          polygons,
-              markers:           markers,
-              scrollGesturesEnabled:   false,
-              zoomGesturesEnabled:     false,
-              tiltGesturesEnabled:     false,
-              rotateGesturesEnabled:   false,
-              zoomControlsEnabled:     false,
-              myLocationButtonEnabled: false,
-              mapToolbarEnabled:       false,
-              compassEnabled:          false,
+              lines: lines,
+              polygons: polygons,
+              markers: markers,
+              gesturesEnabled: false,
             ),
           ),
 

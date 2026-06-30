@@ -2,7 +2,7 @@ name: runrace
 description: Conquista zonas corriendo. Compite, captura, domina.
 publish_to: 'none'
 
-version: 1.0.5+6
+version: 1.0.6+7
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -21,7 +21,8 @@ dependencies:
   google_sign_in: ^6.2.1         # login con Google (móvil)
 
   # ── Mapas y GPS ─────────────────────────────────────────────────────────────
-  google_maps_flutter: ^2.9.0
+  google_maps_flutter: ^2.9.0   # Android + web
+  apple_maps_flutter: ^1.3.0    # iOS (MapKit nativo, sin API key ni billing)
   geolocator: ^13.0.1
   flutter_background_service: ^5.0.5
   permission_handler: ^11.3.1

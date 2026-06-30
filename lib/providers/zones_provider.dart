@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../core/theme.dart';
 import '../models/zone_model.dart';
+import '../widgets/adaptive_map.dart';
 
 // Stream de todas las zonas de la ciudad activa
 final zonesProvider = StreamProvider.autoDispose<List<ZoneModel>>((ref) {
@@ -16,25 +16,24 @@ final zonesProvider = StreamProvider.autoDispose<List<ZoneModel>>((ref) {
           .toList());
 });
 
-// Convierte las zonas en Polygon de Google Maps para renderizar.
-// Las zonas NO son interactivas: no consumen toques ni se pueden seleccionar.
-final mapPolygonsProvider = Provider.autoDispose<Set<Polygon>>((ref) {
+// Convierte las zonas en polígonos neutrales (AdaptiveMap los pinta en Google
+// Maps o Apple Maps según la plataforma). Las zonas NO son interactivas.
+final mapPolygonsProvider = Provider.autoDispose<List<MapPolygonData>>((ref) {
   final zonesAsync = ref.watch(zonesProvider);
 
   return zonesAsync.maybeWhen(
     data: (zones) => zones.map((zone) {
       final fillColor = _zoneColor(zone);
-      return Polygon(
-        polygonId: PolygonId(zone.id),
-        points: zone.polygon,
+      return MapPolygonData(
+        id: zone.id,
+        points: [
+          for (final p in zone.polygon) MapPoint(p.latitude, p.longitude),
+        ],
         fillColor: fillColor.withValues(alpha: 0.34),
         strokeColor: fillColor,
-        strokeWidth: 2,
-        zIndex: 2,
-        consumeTapEvents: false,
       );
-    }).toSet(),
-    orElse: () => {},
+    }).toList(),
+    orElse: () => const [],
   );
 });
 

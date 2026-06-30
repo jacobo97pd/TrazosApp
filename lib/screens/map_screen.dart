@@ -1,28 +1,24 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart' show Factory;
-import 'package:flutter/gestures.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/router.dart';
 import '../core/theme.dart';
 import '../providers/zones_provider.dart';
 import '../services/permissions_service.dart';
+import '../widgets/adaptive_map.dart';
 
-// Camara por defecto (Madrid) hasta tener la ubicacion del usuario.
-const _defaultCameraPosition = CameraPosition(
-  target: LatLng(40.4168, -3.7038),
-  zoom: 14.5,
-);
+// Centro de Madrid por defecto hasta tener la ubicacion del usuario.
+const _madridCenter = MapPoint(40.4168, -3.7038);
 
 // Estilo del puntero de ubicación. `runner` = icono propio (se genera en código);
-// `dot` = punto azul por defecto de Google. Cambia esta constante para alternar.
+// `dot` = punto azul por defecto del mapa. Cambia esta constante para alternar.
 enum _Pointer { runner, dot }
 const _Pointer _pointerStyle = _Pointer.runner;
 
@@ -35,12 +31,12 @@ class MapScreen extends ConsumerStatefulWidget {
 }
 
 class _MapScreenState extends ConsumerState<MapScreen> {
-  GoogleMapController? _mapController;
   String? _darkMapStyle;
-  CameraPosition? _initialCameraPosition;
+  MapPoint? _initialTarget;
+  double _initialZoom = 14.5;
 
-  LatLng? _userLatLng;            // ubicación actual para el puntero
-  BitmapDescriptor? _runnerIcon;  // icono propio del puntero
+  MapPoint? _userLatLng;       // ubicación actual para el puntero
+  Uint8List? _runnerIcon;      // PNG del puntero propio
   StreamSubscription<Position>? _posSub;
 
   @override
@@ -54,7 +50,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   void dispose() {
     _posSub?.cancel();
-    _mapController?.dispose();
     super.dispose();
   }
 
@@ -75,7 +70,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
       final last = await Geolocator.getLastKnownPosition();
       if (last != null && mounted) {
-        setState(() => _userLatLng = LatLng(last.latitude, last.longitude));
+        setState(() => _userLatLng = MapPoint(last.latitude, last.longitude));
       }
 
       _posSub = Geolocator.getPositionStream(
@@ -85,7 +80,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ),
       ).listen((p) {
         if (mounted) {
-          setState(() => _userLatLng = LatLng(p.latitude, p.longitude));
+          setState(() => _userLatLng = MapPoint(p.latitude, p.longitude));
         }
       });
     } catch (_) {/* sin permiso/ubicación: sin puntero */}
@@ -97,9 +92,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   // Genera un puntero circular con el icono (sin necesidad de assets externos).
-  // Para usar una imagen propia (zapatilla, etc.), sustituye por
-  // BitmapDescriptor.bytes con el PNG del asset.
-  Future<BitmapDescriptor> _bitmapFromIcon(IconData icon) async {
+  // Devuelve el PNG en bytes; AdaptiveMap lo envuelve para Google o Apple Maps.
+  Future<Uint8List> _bitmapFromIcon(IconData icon) async {
     const double size = 120;
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
@@ -132,7 +126,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final image =
         await recorder.endRecording().toImage(size.toInt(), size.toInt());
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    return BitmapDescriptor.bytes(bytes!.buffer.asUint8List());
+    return bytes!.buffer.asUint8List();
   }
 
   Future<void> _prepareMap() async {
@@ -145,11 +139,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     setState(() {
       _darkMapStyle = style;
-      _initialCameraPosition = camera;
+      _initialTarget = camera.target;
+      _initialZoom = camera.zoom;
     });
   }
 
-  Future<CameraPosition> _userCamera() async {
+  Future<({MapPoint target, double zoom})> _userCamera() async {
     try {
       final permission = await Geolocator.checkPermission();
       final resolvedPermission = permission == LocationPermission.denied
@@ -158,71 +153,46 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
       if (resolvedPermission == LocationPermission.denied ||
           resolvedPermission == LocationPermission.deniedForever) {
-        return _defaultCameraPosition;
+        return (target: _madridCenter, zoom: 14.5);
       }
 
       final pos = await Geolocator.getCurrentPosition().timeout(
         const Duration(seconds: 4),
       );
-      return CameraPosition(
-        target: LatLng(pos.latitude, pos.longitude),
-        zoom: 15,
-      );
+      return (target: MapPoint(pos.latitude, pos.longitude), zoom: 15.0);
     } catch (_) {
-      return _defaultCameraPosition;
+      return (target: _madridCenter, zoom: 14.5);
     }
-  }
-
-  void _onMapCreated(GoogleMapController controller) {
-    _mapController = controller;
   }
 
   @override
   Widget build(BuildContext context) {
     final polygons = ref.watch(mapPolygonsProvider);
-    final mapReady = _darkMapStyle != null && _initialCameraPosition != null;
+    final mapReady = _darkMapStyle != null && _initialTarget != null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
           mapReady
-              ? GoogleMap(
-                  initialCameraPosition: _initialCameraPosition!,
-                  onMapCreated: _onMapCreated,
-                  style: _darkMapStyle,
+              ? AdaptiveMap(
+                  initialTarget: _initialTarget!,
+                  initialZoom: _initialZoom,
+                  googleDarkStyle: _darkMapStyle,
                   polygons: polygons,
-                  markers: {
+                  markers: [
                     if (_pointerStyle == _Pointer.runner &&
                         _userLatLng != null &&
                         _runnerIcon != null)
-                      Marker(
-                        markerId: const MarkerId('me'),
-                        position: _userLatLng!,
-                        icon: _runnerIcon!,
-                        anchor: const Offset(0.5, 0.5),
-                        flat: true,
-                        zIndexInt: 5,
+                      MapMarkerData(
+                        id: 'me',
+                        point: _userLatLng!,
+                        iconBytes: _runnerIcon,
                       ),
-                  },
+                  ],
                   // Punto azul por defecto solo si el estilo es `dot`.
                   myLocationEnabled: _pointerStyle == _Pointer.dot,
-                  // Mover + zoom habilitados; EagerGestureRecognizer garantiza
-                  // que el mapa gane los gestos (también dentro de scrolls).
-                  gestureRecognizers: {
-                    Factory<OneSequenceGestureRecognizer>(
-                      () => EagerGestureRecognizer(),
-                    ),
-                  },
-                  scrollGesturesEnabled: true,
-                  zoomGesturesEnabled: true,
-                  tiltGesturesEnabled: false,
-                  rotateGesturesEnabled: false,
-                  zoomControlsEnabled: false,
-                  myLocationButtonEnabled: false,
-                  mapToolbarEnabled: false,
-                  compassEnabled: false,
-                  buildingsEnabled: false,
+                  gesturesEnabled: true,
                 )
               : const _DarkMapPlaceholder(),
           Positioned(
