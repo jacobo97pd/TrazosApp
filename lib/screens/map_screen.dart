@@ -10,7 +10,6 @@ import 'package:go_router/go_router.dart';
 
 import '../core/router.dart';
 import '../core/theme.dart';
-import '../providers/zones_provider.dart';
 import '../services/permissions_service.dart';
 import '../widgets/adaptive_map.dart';
 
@@ -167,7 +166,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final polygons = ref.watch(mapPolygonsProvider);
     final mapReady = _darkMapStyle != null && _initialTarget != null;
 
     return Scaffold(
@@ -179,7 +177,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   initialTarget: _initialTarget!,
                   initialZoom: _initialZoom,
                   googleDarkStyle: _darkMapStyle,
-                  polygons: polygons,
                   markers: [
                     if (_pointerStyle == _Pointer.runner &&
                         _userLatLng != null &&
