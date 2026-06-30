@@ -7,7 +7,6 @@ import '../core/theme.dart';
 import '../core/router.dart';
 import '../core/constants.dart';
 import '../providers/run_provider.dart';
-import '../providers/zones_provider.dart';
 import '../services/zone_capture_service.dart';
 import '../widgets/adaptive_map.dart';
 
@@ -46,8 +45,7 @@ class _RunScreenState extends ConsumerState<RunScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final run      = ref.watch(runProvider);
-    final polygons = ref.watch(mapPolygonsProvider);
+    final run = ref.watch(runProvider);
 
     // Seguir al usuario en el mapa
     ref.listen(runProvider.select((s) => s.currentPosition), (_, pos) {
@@ -70,6 +68,22 @@ class _RunScreenState extends ConsumerState<RunScreen> {
           ],
           color: run.isPolygonClosed ? AppColors.green : AppColors.accent,
           width: 5,
+        ),
+    ];
+
+    // Al cerrarse el cerco, pintamos el area conquistada con relleno
+    // semitransparente (deja ver el mapa por debajo).
+    final closedRing = run.polygon ?? run.route;
+    final cerco = [
+      if (run.isPolygonClosed && closedRing.length > 2)
+        MapPolygonData(
+          id: 'cerco',
+          points: [
+            for (final p in closedRing) MapPoint(p.latitude, p.longitude),
+          ],
+          fillColor: AppColors.green.withValues(alpha: 0.28),
+          strokeColor: AppColors.green,
+          strokeWidth: 3,
         ),
     ];
 
@@ -98,7 +112,7 @@ class _RunScreenState extends ConsumerState<RunScreen> {
               initialZoom: 16.5,
               myLocationEnabled: true,
               lines: lines,
-              polygons: polygons,
+              polygons: cerco,
               markers: markers,
               gesturesEnabled: false,
             ),
