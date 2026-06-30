@@ -45,6 +45,13 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: rootNavigatorKey,
     initialLocation: AppRoutes.splash,
     redirect: (context, state) {
+      // El deep-link OAuth de Strava (runrace://…/strava-callback?code=…) lo
+      // consume StravaService vía app_links; aquí solo evitamos que go_router
+      // muestre "Ruta no encontrada" mandándolo al splash (que decide a dónde ir).
+      if (state.uri.path.endsWith('strava-callback')) {
+        return AppRoutes.splash;
+      }
+
       final isLoggedIn = authState.valueOrNull != null;
       final isOnAuthRoute = state.matchedLocation == AppRoutes.auth ||
           state.matchedLocation == AppRoutes.onboarding ||

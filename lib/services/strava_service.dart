@@ -80,6 +80,14 @@ class StravaService {
   // normalice la URL y borre el "?code=" (estrategia hash de Flutter web).
   static String? _pendingWebCode;
 
+  // Los codes de Strava son de UN SOLO USO. En iOS, getInitialLink() puede
+  // devolver el mismo deep-link viejo en un reintento → se canjearía un code
+  // ya gastado y Strava responde 400 "code invalid". Evitamos:
+  //  - logins concurrentes (_loginInFlight)
+  //  - canjear dos veces el mismo code (_handledCodes)
+  static bool _loginInFlight = false;
+  static final Set<String> _handledCodes = {};
+
   static void captureWebStravaCallback() {
     if (!kIsWeb) return;
     final p = Uri.base.queryParameters;
@@ -99,10 +107,17 @@ class StravaService {
       return false;
     }
 
-    final code = await _awaitCodeMobile();
-    if (code == null) return false;
-    await _completeStravaLogin(code);
-    return true;
+    // Evita dos flujos a la vez (re-tap del botón mientras Safari está abierto).
+    if (_loginInFlight) return false;
+    _loginInFlight = true;
+    try {
+      final code = await _awaitCodeMobile();
+      if (code == null) return false;
+      await _completeStravaLogin(code);
+      return true;
+    } finally {
+      _loginInFlight = false;
+    }
   }
 
   // True si venimos del redirect OAuth de Strava en web y aún no hay sesión.
@@ -131,6 +146,11 @@ class StravaService {
 
   // Intercambia el code por un custom token de Firebase y abre sesión.
   Future<void> _completeStravaLogin(String code) async {
+    // Un code de Strava solo se puede canjear una vez. Si ya lo intentamos
+    // (p. ej. getInitialLink devolvió el mismo deep-link en un reintento),
+    // no lo reenviamos: Strava respondería 400 "code invalid".
+    if (!_handledCodes.add(code)) return;
+
     final result = await _functions
         .httpsCallable('loginWithStrava')
         .call<Map<String, dynamic>>({'code': code});
