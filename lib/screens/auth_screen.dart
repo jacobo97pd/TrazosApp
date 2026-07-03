@@ -2,11 +2,16 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/theme.dart';
 import '../core/router.dart';
 import '../providers/auth_provider.dart';
 import '../services/strava_service.dart';
+
+// Paginas legales (Firebase Hosting).
+const _kTermsUrl = 'https://trazos-database.web.app/terms.html';
+const _kPrivacyUrl = 'https://trazos-database.web.app/privacy.html';
 
 enum _AuthMode { signIn, signUp }
 
@@ -21,6 +26,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+  final _confirmPassCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
   _AuthMode _mode = _AuthMode.signIn;
   bool _obscurePass = true;
@@ -29,8 +35,35 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   void dispose() {
     _emailCtrl.dispose();
     _passCtrl.dispose();
+    _confirmPassCtrl.dispose();
     _nameCtrl.dispose();
     super.dispose();
+  }
+
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  // Restablecer contraseña: envía el correo de reset al email introducido.
+  Future<void> _forgotPassword() async {
+    final email = _emailCtrl.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      _snack('Introduce tu email para restablecer la contraseña.');
+      return;
+    }
+    try {
+      await ref.read(authNotifierProvider.notifier).resetPassword(email);
+      _snack('Te hemos enviado un correo para restablecer la contraseña.');
+    } catch (e) {
+      _snack('No se pudo enviar el correo: $e');
+    }
+  }
+
+  Future<void> _openLegal(String url) async {
+    final ok = await launchUrl(Uri.parse(url),
+        mode: LaunchMode.externalApplication);
+    if (!ok) _snack('No se pudo abrir el enlace.');
   }
 
   Future<void> _submit() async {
@@ -168,7 +201,35 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ? 'Mínimo 6 caracteres'
                       : null,
                 ),
-                const SizedBox(height: 28),
+
+                // Confirmar contraseña (solo registro) — evita erratas.
+                if (_mode == _AuthMode.signUp) ...[
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _confirmPassCtrl,
+                    obscureText: _obscurePass,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirmar contraseña',
+                      prefixIcon: Icon(Icons.lock_outline),
+                    ),
+                    validator: (v) => (v != _passCtrl.text)
+                        ? 'Las contraseñas no coinciden'
+                        : null,
+                  ),
+                ],
+
+                // ¿Olvidaste la contraseña? (solo inicio de sesión), entre el
+                // campo de contraseña y el botón de acceso.
+                if (_mode == _AuthMode.signIn)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: isLoading ? null : _forgotPassword,
+                      child: const Text('¿Olvidaste tu contraseña?'),
+                    ),
+                  ),
+
+                SizedBox(height: _mode == _AuthMode.signIn ? 12 : 28),
 
                 ElevatedButton(
                   onPressed: isLoading ? null : _submit,
@@ -234,9 +295,53 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     ),
                   ),
                 ),
+
+                // Acceso a Términos y Política de privacidad.
+                const SizedBox(height: 8),
+                Center(
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text('Al continuar aceptas los ',
+                          style: AppTextStyles.caption),
+                      _LegalLink(
+                        label: 'Términos',
+                        onTap: () => _openLegal(_kTermsUrl),
+                      ),
+                      Text(' y la ', style: AppTextStyles.caption),
+                      _LegalLink(
+                        label: 'Política de privacidad',
+                        onTap: () => _openLegal(_kPrivacyUrl),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// Enlace de texto para las páginas legales.
+class _LegalLink extends StatelessWidget {
+  const _LegalLink({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Text(
+        label,
+        style: AppTextStyles.caption.copyWith(
+          color: AppColors.accent,
+          fontWeight: FontWeight.w600,
+          decoration: TextDecoration.underline,
         ),
       ),
     );

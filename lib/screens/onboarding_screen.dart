@@ -71,11 +71,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: _finish,
-                child: const Text('Saltar'),
+            SizedBox(
+              height: 48,
+              child: Row(
+                children: [
+                  // Atrás: disponible a partir del paso 2.
+                  if (_current > 0)
+                    IconButton(
+                      onPressed: () => _controller.previousPage(
+                        duration: const Duration(milliseconds: 350),
+                        curve:    Curves.easeInOut,
+                      ),
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      color: AppColors.textSecondary,
+                    ),
+                  const Spacer(),
+                  // Saltar: se oculta en el último paso (no hay nada que saltar).
+                  if (_current != _pages.length - 1)
+                    TextButton(
+                      onPressed: _finish,
+                      child: const Text('Saltar'),
+                    ),
+                ],
               ),
             ),
             Expanded(
