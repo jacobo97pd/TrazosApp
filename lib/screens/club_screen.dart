@@ -482,8 +482,23 @@ class _NoClubViewState extends ConsumerState<_NoClubView> {
     super.dispose();
   }
 
+  // Mínimo 3 caracteres para el nombre del club (null = sin error).
+  static const int _minClubNameLength = 3;
+  String? get _nameError {
+    final n = _nameCtrl.text.trim();
+    if (n.isEmpty) return null; // no molestamos hasta que empiece a escribir
+    if (n.length < _minClubNameLength) {
+      return 'Mínimo $_minClubNameLength caracteres';
+    }
+    return null;
+  }
+
+  bool get _canCreateClub =>
+      _nameCtrl.text.trim().length >= _minClubNameLength &&
+      _cityCtrl.text.trim().isNotEmpty;
+
   Future<void> _createClub() async {
-    if (_nameCtrl.text.trim().isEmpty || _cityCtrl.text.trim().isEmpty) return;
+    if (!_canCreateClub) return;
     setState(() => _isLoading = true);
 
     final uid  = FirebaseAuth.instance.currentUser?.uid;
@@ -571,16 +586,21 @@ class _NoClubViewState extends ConsumerState<_NoClubView> {
           const SizedBox(height: 12),
           TextField(
             controller: _nameCtrl,
-            decoration: const InputDecoration(labelText: 'Nombre del club'),
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              labelText: 'Nombre del club',
+              errorText: _nameError,
+            ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _cityCtrl,
+            onChanged: (_) => setState(() {}),
             decoration: const InputDecoration(labelText: 'Ciudad'),
           ),
           const SizedBox(height: 16),
           ElevatedButton.icon(
-            onPressed: _isLoading ? null : _createClub,
+            onPressed: (_isLoading || !_canCreateClub) ? null : _createClub,
             icon:  const Icon(Icons.add_rounded),
             label: const Text('Crear club'),
           ),

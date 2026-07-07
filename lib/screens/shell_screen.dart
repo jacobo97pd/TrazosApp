@@ -27,6 +27,18 @@ class ShellScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final idx = _currentIndex(context);
+    // Botón atrás de Android: desde cualquier pestaña que no sea Mapa, volvemos
+    // a Mapa (en vez de cerrar la app). Solo desde Mapa el atrás sale de la app.
+    return PopScope(
+      canPop: idx == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) context.go(AppRoutes.map);
+      },
+      child: _buildScaffold(context, idx),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context, int idx) {
     return Scaffold(
       body: child,
       bottomNavigationBar: Container(

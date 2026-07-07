@@ -58,7 +58,12 @@ service cloud.firestore {
     // ── Clubs ─────────────────────────────────────────────────────────────
     match /clubs/{clubId} {
       allow read:   if isAuth();
-      allow create: if isAuth() && request.resource.data.adminId == request.auth.uid;
+      allow create: if isAuth()
+                    && request.resource.data.adminId == request.auth.uid
+                    // Nombre de club de al menos 3 caracteres (no se puede
+                    // saltar desde el cliente).
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() >= 3;
       allow update: if isAuth() && (
         isClubAdmin(clubId) ||
         // Cualquier usuario autenticado puede añadirse como miembro

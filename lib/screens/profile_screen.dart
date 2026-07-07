@@ -24,7 +24,7 @@ class ProfileScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout_rounded),
-            onPressed: () => ref.read(authNotifierProvider.notifier).signOut(),
+            onPressed: () => _confirmSignOut(context, ref),
             tooltip: 'Cerrar sesión',
           ),
         ],
@@ -37,6 +37,32 @@ class ProfileScreen extends ConsumerWidget {
             : const Center(child: Text('Sin datos de usuario')),
       ),
     );
+  }
+
+  // Confirma antes de cerrar sesión para evitar toques accidentales.
+  Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('¿Cerrar sesión?'),
+        content: const Text('Tendrás que volver a iniciar sesión para entrar.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.accent),
+            child: const Text('Cerrar sesión'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await ref.read(authNotifierProvider.notifier).signOut();
+    }
   }
 }
 
