@@ -3,9 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../core/theme.dart';
+import '../core/router.dart';
 import '../providers/auth_provider.dart';
 import '../models/user_model.dart';
 import '../services/strava_service.dart';
@@ -22,6 +24,11 @@ class ProfileScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Perfil'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => context.push(AppRoutes.settings),
+            tooltip: 'Ajustes',
+          ),
           IconButton(
             icon: const Icon(Icons.logout_rounded),
             onPressed: () => _confirmSignOut(context, ref),

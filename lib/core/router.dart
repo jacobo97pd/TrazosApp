@@ -16,6 +16,7 @@ import '../screens/board_screen.dart';
 import '../screens/club_chat_screen.dart';
 import '../screens/club_events_screen.dart';
 import '../screens/create_event_screen.dart';
+import '../screens/settings_screen.dart';
 
 // Clave del navigator raíz — permite navegar desde fuera del árbol de widgets
 // (p. ej. al tocar una notificación push en NotificationService).
@@ -32,6 +33,7 @@ abstract final class AppRoutes {
   static const clubChat   = '/club/chat';
   static const clubEvents = '/club/events';
   static const createEvent = '/club/events/new';
+  static const settings   = '/settings';
   static const board      = '/home/board';
   static const ranking    = '/home/ranking';
   static const profile    = '/home/profile';
@@ -89,6 +91,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.createEvent,
         builder: (_, __) => const CreateEventScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.settings,
+        builder: (_, __) => const SettingsScreen(),
       ),
       ShellRoute(
         builder: (_, __, child) => ShellScreen(child: child),
