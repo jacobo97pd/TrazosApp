@@ -1,26 +1,42 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// ── SIMULADOR DE GPS (temporal, solo para pruebas) ──────────────────────────
 ///
 /// Permite "moverse" por el mapa con un joystick sin salir a correr de verdad.
 ///
-/// Está atado a `kDebugMode`: SOLO se activa en builds de depuración
-/// (`flutter run`). En los builds de release (Play / TestFlight que ven los
-/// testers) queda automáticamente DESACTIVADO y se usa el GPS real, así que es
-/// seguro dejar este código en el repo.
+/// Es un interruptor en tiempo de ejecución (Ajustes → "Modo simulación"),
+/// APAGADO por defecto. Así en la build de release (Play / TestFlight) los
+/// testers usan GPS real y NO ven el joystick a menos que lo activen ellos.
+/// Tú puedes encenderlo en tu móvil para probar todo el flujo de carrera.
 ///
-/// Para probar: `flutter run` en un emulador Android o un móvil conectado, y en
-/// la pantalla de carrera arrastra el joystick para "correr".
-/// Para quitarlo del todo: pon esta constante a `false` (o borra dev/ y sus usos).
-const bool kSimulateLocation = kDebugMode;
+/// Para quitarlo del todo antes del lanzamiento público: borra la carpeta
+/// `lib/dev/`, la sección "Desarrollo" de Ajustes y los usos de
+/// `kSimulateLocation` en run_provider.dart y run_screen.dart.
+bool get kSimulateLocation => LocationSimulator.enabled;
 
 class LocationSimulator {
   LocationSimulator._();
   static final LocationSimulator instance = LocationSimulator._();
+
+  // ── Interruptor persistente (Ajustes → Modo simulación) ───────────────────
+  static const String _prefKey = 'sim_mode_enabled';
+  static bool enabled = false;
+
+  /// Carga el estado guardado. Llamar en main() antes de runApp.
+  static Future<void> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    enabled = prefs.getBool(_prefKey) ?? false;
+  }
+
+  static Future<void> setEnabled(bool value) async {
+    enabled = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefKey, value);
+  }
 
   final _controller = StreamController<Position>.broadcast();
   Stream<Position> get positions => _controller.stream;

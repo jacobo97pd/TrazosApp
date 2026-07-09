@@ -7,6 +7,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/theme.dart';
+import '../dev/location_simulator.dart';
 
 // Páginas legales (Firebase Hosting).
 const _kTermsUrl = 'https://trazos-database.web.app/terms.html';
@@ -22,6 +23,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _version = '';
   bool _clearing = false;
+  bool _simEnabled = LocationSimulator.enabled;
 
   @override
   void initState() {
@@ -142,6 +144,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             trailing: const Icon(Icons.open_in_new_rounded,
                 size: 18, color: AppColors.textSecondary),
             onTap: () => _openUrl(_kPrivacyUrl),
+          ),
+
+          const _SectionHeader('Desarrollo'),
+          SwitchListTile(
+            secondary: const Icon(Icons.sports_esports_outlined,
+                color: AppColors.textSecondary),
+            title: Text('Modo simulación', style: AppTextStyles.bodyLarge),
+            subtitle: Text(
+              'Muestra un joystick en la carrera para moverte por el mapa sin '
+              'salir a correr (solo para pruebas).',
+              style: AppTextStyles.caption,
+            ),
+            activeThumbColor: AppColors.accent,
+            value: _simEnabled,
+            onChanged: (v) async {
+              await LocationSimulator.setEnabled(v);
+              if (mounted) setState(() => _simEnabled = v);
+            },
           ),
         ],
       ),
