@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -9,22 +10,24 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/run_model.dart';
 import '../core/constants.dart';
+import '../dev/location_simulator.dart';
 import '../services/zone_capture_service.dart';
 import 'zones_provider.dart';
 
 // Auto-cierre del cerco: vuelves cerca del punto de inicio tras alejarte.
-const double _loopCloseRadiusMeters = 35.0; // a esta distancia del inicio cierra
-const double _minAwayMeters         = 60.0; // debes alejarte al menos esto antes
+const double _loopCloseRadiusMeters =
+    35.0; // a esta distancia del inicio cierra
+const double _minAwayMeters = 60.0; // debes alejarte al menos esto antes
 
 // Estado inmutable de la sesión de carrera
 class RunState {
   const RunState({
-    this.isRunning  = false,
-    this.isPaused   = false,
-    this.route      = const [],
+    this.isRunning = false,
+    this.isPaused = false,
+    this.route = const [],
     this.polygon,
     this.isPolygonClosed = false,
-    this.distanceMeters  = 0.0,
+    this.distanceMeters = 0.0,
     this.durationSeconds = 0,
     this.currentPosition,
     this.distanceToStartMeters = 0.0,
@@ -70,30 +73,40 @@ class RunState {
   }
 
   // ¿Falta distancia mínima para poder cerrar?
-  bool get reachedMinDistance => distanceMeters >= AppConstants.minRunDistanceMeters;
+  bool get reachedMinDistance =>
+      distanceMeters >= AppConstants.minRunDistanceMeters;
 
   RunState copyWith({
-    bool? isRunning, bool? isPaused, List<LatLng>? route,
-    List<LatLng>? polygon, bool? isPolygonClosed,
-    double? distanceMeters, int? durationSeconds,
-    LatLng? currentPosition, double? distanceToStartMeters,
-    bool? isCapturing, ZoneCaptureResult? captureResult, String? capturedZoneName,
+    bool? isRunning,
+    bool? isPaused,
+    List<LatLng>? route,
+    List<LatLng>? polygon,
+    bool? isPolygonClosed,
+    double? distanceMeters,
+    int? durationSeconds,
+    LatLng? currentPosition,
+    double? distanceToStartMeters,
+    bool? isCapturing,
+    ZoneCaptureResult? captureResult,
+    String? capturedZoneName,
     RunModel? lastSaved,
-  }) => RunState(
-    isRunning:       isRunning       ?? this.isRunning,
-    isPaused:        isPaused        ?? this.isPaused,
-    route:           route           ?? this.route,
-    polygon:         polygon         ?? this.polygon,
-    isPolygonClosed: isPolygonClosed ?? this.isPolygonClosed,
-    distanceMeters:  distanceMeters  ?? this.distanceMeters,
-    durationSeconds: durationSeconds ?? this.durationSeconds,
-    currentPosition: currentPosition ?? this.currentPosition,
-    distanceToStartMeters: distanceToStartMeters ?? this.distanceToStartMeters,
-    isCapturing:     isCapturing     ?? this.isCapturing,
-    captureResult:   captureResult   ?? this.captureResult,
-    capturedZoneName: capturedZoneName ?? this.capturedZoneName,
-    lastSaved:       lastSaved       ?? this.lastSaved,
-  );
+  }) =>
+      RunState(
+        isRunning: isRunning ?? this.isRunning,
+        isPaused: isPaused ?? this.isPaused,
+        route: route ?? this.route,
+        polygon: polygon ?? this.polygon,
+        isPolygonClosed: isPolygonClosed ?? this.isPolygonClosed,
+        distanceMeters: distanceMeters ?? this.distanceMeters,
+        durationSeconds: durationSeconds ?? this.durationSeconds,
+        currentPosition: currentPosition ?? this.currentPosition,
+        distanceToStartMeters:
+            distanceToStartMeters ?? this.distanceToStartMeters,
+        isCapturing: isCapturing ?? this.isCapturing,
+        captureResult: captureResult ?? this.captureResult,
+        capturedZoneName: capturedZoneName ?? this.capturedZoneName,
+        lastSaved: lastSaved ?? this.lastSaved,
+      );
 }
 
 class RunNotifier extends Notifier<RunState> {
@@ -114,16 +127,28 @@ class RunNotifier extends Notifier<RunState> {
   RunState build() => const RunState();
 
   Future<void> startRun() async {
-    final permission = await Geolocator.requestPermission();
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      return;
+    if (!kSimulateLocation) {
+      final permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+    } else {
+      // Modo simulación: siembra el punto de partida en la última ubicación
+      // conocida si la hay (si no, se queda en el centro de Madrid por defecto).
+      try {
+        final last = await Geolocator.getLastKnownPosition();
+        if (last != null) {
+          LocationSimulator.instance.lat = last.latitude;
+          LocationSimulator.instance.lng = last.longitude;
+        }
+      } catch (_) {/* sin GPS: usa el punto por defecto del simulador */}
     }
 
     _maxDistFromStart = 0;
-    _startedAt   = DateTime.now();
+    _startedAt = DateTime.now();
     _pausedTotal = Duration.zero;
-    _pauseStart  = null;
+    _pauseStart = null;
     _lastPosTime = null;
     state = const RunState(isRunning: true);
     _startTimer();
@@ -150,6 +175,7 @@ class RunNotifier extends Notifier<RunState> {
   // Finaliza la sesión (botón Parar/Finalizar): guarda si no se guardó y resetea.
   Future<void> stopRun() async {
     _timer?.cancel();
+    if (kSimulateLocation) LocationSimulator.instance.stop();
     await _locationSub?.cancel();
     if (state.lastSaved == null) await _saveRun();
     _maxDistFromStart = 0;
@@ -162,7 +188,8 @@ class RunNotifier extends Notifier<RunState> {
 
   int get _elapsedSeconds {
     if (_startedAt == null) return state.durationSeconds;
-    return DateTime.now().difference(_startedAt!).inSeconds - _pausedTotal.inSeconds;
+    return DateTime.now().difference(_startedAt!).inSeconds -
+        _pausedTotal.inSeconds;
   }
 
   void _startTimer() {
@@ -172,25 +199,31 @@ class RunNotifier extends Notifier<RunState> {
   }
 
   void _startLocationTracking() {
-    _locationSub = Geolocator.getPositionStream(locationSettings: _locationSettings())
-        .listen((position) {
+    // En modo simulación el joystick alimenta las posiciones; si no, GPS real.
+    final stream = kSimulateLocation
+        ? LocationSimulator.instance.positions
+        : Geolocator.getPositionStream(locationSettings: _locationSettings());
+    _locationSub = stream.listen((position) {
       if (state.isPolygonClosed) return; // ya cerrado, ignorar
       final newPoint = LatLng(position.latitude, position.longitude);
-      final route    = state.route;
-      final now      = position.timestamp;
+      final route = state.route;
+      final now = position.timestamp;
 
       double addedDistance = 0;
       if (route.isNotEmpty) {
         final segMeters = Geolocator.distanceBetween(
-          route.last.latitude, route.last.longitude,
-          newPoint.latitude, newPoint.longitude,
+          route.last.latitude,
+          route.last.longitude,
+          newPoint.latitude,
+          newPoint.longitude,
         );
         // Velocidad del segmento; si es un salto imposible (deriva GPS o
         // vehículo) no sumamos su distancia para no inflar los km.
         final segSecs = _lastPosTime != null
             ? now.difference(_lastPosTime!).inMilliseconds / 1000.0
             : 0.0;
-        final segKmh = segSecs > 0 ? (segMeters / 1000) / (segSecs / 3600) : 0.0;
+        final segKmh =
+            segSecs > 0 ? (segMeters / 1000) / (segSecs / 3600) : 0.0;
         if (segKmh <= AppConstants.glitchSpeedKmh) {
           addedDistance = segMeters;
         }
@@ -199,20 +232,25 @@ class RunNotifier extends Notifier<RunState> {
 
       final start = route.isEmpty ? newPoint : route.first;
       final distFromStart = Geolocator.distanceBetween(
-        start.latitude, start.longitude,
-        newPoint.latitude, newPoint.longitude,
+        start.latitude,
+        start.longitude,
+        newPoint.latitude,
+        newPoint.longitude,
       );
       if (distFromStart > _maxDistFromStart) _maxDistFromStart = distFromStart;
 
       state = state.copyWith(
-        route:                 [...route, newPoint],
-        currentPosition:       newPoint,
-        distanceMeters:        state.distanceMeters + addedDistance,
+        route: [...route, newPoint],
+        currentPosition: newPoint,
+        distanceMeters: state.distanceMeters + addedDistance,
         distanceToStartMeters: distFromStart,
       );
 
       _checkAutoClose();
     });
+
+    // Emite la posición de partida para que la ruta tenga un primer punto.
+    if (kSimulateLocation) LocationSimulator.instance.begin();
   }
 
   // Cierra el cerco automáticamente al volver al inicio (tras alejarte y correr
@@ -235,13 +273,15 @@ class RunNotifier extends Notifier<RunState> {
   // Busca la zona cuyo centroide queda dentro del cerco y la intenta capturar.
   Future<void> _autoCapture() async {
     final polygon = state.polygon;
-    if (polygon == null || polygon.length < AppConstants.minPolygonPoints) return;
+    if (polygon == null || polygon.length < AppConstants.minPolygonPoints) {
+      return;
+    }
 
     state = state.copyWith(isCapturing: true);
 
     // Anti-trampas: la velocidad media de toda la carrera debe ser de correr,
     // no de bici/coche (ni de estar parado).
-    final hours  = state.durationSeconds / 3600.0;
+    final hours = state.durationSeconds / 3600.0;
     final avgKmh = hours > 0 ? (state.distanceMeters / 1000) / hours : 0.0;
     if (avgKmh > AppConstants.maxAvgSpeedKmh ||
         avgKmh < AppConstants.minAvgSpeedKmh) {
@@ -254,9 +294,8 @@ class RunNotifier extends Notifier<RunState> {
     }
 
     final zones = ref.read(zonesProvider).valueOrNull ?? const [];
-    final inside = zones
-        .where((z) => _pointInPolygon(z.centroid, polygon))
-        .toList();
+    final inside =
+        zones.where((z) => _pointInPolygon(z.centroid, polygon)).toList();
 
     if (inside.isEmpty) {
       await _saveRun();
@@ -269,8 +308,8 @@ class RunNotifier extends Notifier<RunState> {
 
     // Si hay varias, elige la más cercana al centro del recorrido.
     final center = _routeCentroid(polygon);
-    inside.sort((a, b) => _distance(center, a.centroid)
-        .compareTo(_distance(center, b.centroid)));
+    inside.sort((a, b) =>
+        _distance(center, a.centroid).compareTo(_distance(center, b.centroid)));
     final zone = inside.first;
 
     final result = await ref.read(zoneCaptureServiceProvider).attemptCapture(
@@ -296,17 +335,17 @@ class RunNotifier extends Notifier<RunState> {
     if (uid == null || state.route.isEmpty) return;
 
     final run = RunModel(
-      id:             _uuid.v4(),
-      userId:         uid,
-      userName:       FirebaseAuth.instance.currentUser?.displayName ?? uid,
-      route:          state.route,
-      polygon:        state.polygon,
-      distance:       state.distanceMeters,
-      duration:       state.durationSeconds,
-      avgPace:        state.avgPaceMinPerKm,
-      startedAt:      _startedAt ??
+      id: _uuid.v4(),
+      userId: uid,
+      userName: FirebaseAuth.instance.currentUser?.displayName ?? uid,
+      route: state.route,
+      polygon: state.polygon,
+      distance: state.distanceMeters,
+      duration: state.durationSeconds,
+      avgPace: state.avgPaceMinPerKm,
+      startedAt: _startedAt ??
           DateTime.now().subtract(Duration(seconds: state.durationSeconds)),
-      finishedAt:     DateTime.now(),
+      finishedAt: DateTime.now(),
       capturedZoneId: capturedZoneId,
     );
 
@@ -323,7 +362,7 @@ class RunNotifier extends Notifier<RunState> {
     if (state.distanceMeters > 0) {
       try {
         await FirebaseFirestore.instance.collection('users').doc(uid).update({
-          'totalKm':    FieldValue.increment(state.distanceMeters / 1000),
+          'totalKm': FieldValue.increment(state.distanceMeters / 1000),
           'lastActive': FieldValue.serverTimestamp(),
         });
       } catch (_) {/* la carrera ya quedó guardada; no bloquear por esto */}
@@ -348,7 +387,8 @@ class RunNotifier extends Notifier<RunState> {
             notificationTitle: 'TRAZOS · carrera en curso',
             notificationText: 'Registrando tu ruta aunque bloquees el móvil.',
             enableWakeLock: true,
-            notificationIcon: AndroidResource(name: 'ic_launcher', defType: 'mipmap'),
+            notificationIcon:
+                AndroidResource(name: 'ic_launcher', defType: 'mipmap'),
           ),
         );
       case TargetPlatform.iOS:
@@ -370,7 +410,10 @@ class RunNotifier extends Notifier<RunState> {
   // ── Geometría ────────────────────────────────────────────────────────────────
 
   double _distance(LatLng a, LatLng b) => Geolocator.distanceBetween(
-        a.latitude, a.longitude, b.latitude, b.longitude,
+        a.latitude,
+        a.longitude,
+        b.latitude,
+        b.longitude,
       );
 
   LatLng _routeCentroid(List<LatLng> pts) {
@@ -389,7 +432,8 @@ class RunNotifier extends Notifier<RunState> {
       final xi = poly[i].longitude, yi = poly[i].latitude;
       final xj = poly[j].longitude, yj = poly[j].latitude;
       final intersect = ((yi > point.latitude) != (yj > point.latitude)) &&
-          (point.longitude < (xj - xi) * (point.latitude - yi) / (yj - yi) + xi);
+          (point.longitude <
+              (xj - xi) * (point.latitude - yi) / (yj - yi) + xi);
       if (intersect) inside = !inside;
     }
     return inside;

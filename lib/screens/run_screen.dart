@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../core/theme.dart';
 import '../core/router.dart';
 import '../core/constants.dart';
+import '../dev/location_simulator.dart';
+import '../dev/sim_joystick.dart';
 import '../providers/run_provider.dart';
 import '../services/zone_capture_service.dart';
 import '../widgets/adaptive_map.dart';
@@ -125,7 +127,10 @@ class _RunScreenState extends ConsumerState<RunScreen> {
               confettiController: _confetti,
               blastDirectionality: BlastDirectionality.explosive,
               colors: const [
-                AppColors.accent, AppColors.cyan, AppColors.green, AppColors.gold,
+                AppColors.accent,
+                AppColors.cyan,
+                AppColors.green,
+                AppColors.gold,
               ],
               numberOfParticles: 60,
             ),
@@ -134,12 +139,39 @@ class _RunScreenState extends ConsumerState<RunScreen> {
           // ── HUD superior ───────────────────────────────────────────────────
           Positioned(top: 0, left: 0, right: 0, child: _RunHud(run: run)),
 
+          // ── Joystick de simulación (solo pruebas) ──────────────────────────
+          if (kSimulateLocation &&
+              !run.isPolygonClosed &&
+              run.captureResult == null)
+            Positioned(
+              left: 20,
+              bottom: 190,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SimJoystick(),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text('SIMULACIÓN', style: AppTextStyles.caption),
+                  ),
+                ],
+              ),
+            ),
+
           // ── Zona inferior ──────────────────────────────────────────────────
           Positioned(
-            bottom: 0, left: 0, right: 0,
+            bottom: 0,
+            left: 0,
+            right: 0,
             child: run.captureResult != null
                 ? _ResultCard(
-                    result:   run.captureResult!,
+                    result: run.captureResult!,
                     zoneName: run.capturedZoneName,
                     onFinish: _finish,
                   )
@@ -168,12 +200,14 @@ class _RunHud extends StatelessWidget {
     return Container(
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 12,
-        left: 20, right: 20, bottom: 16,
+        left: 20,
+        right: 20,
+        bottom: 16,
       ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
-          end:   Alignment.bottomCenter,
+          end: Alignment.bottomCenter,
           colors: [
             AppColors.background.withValues(alpha: 0.95),
             AppColors.background.withValues(alpha: 0),
@@ -185,9 +219,9 @@ class _RunHud extends StatelessWidget {
         children: [
           _HudStat(label: 'TIEMPO', value: run.formattedDuration),
           _HudDivider(),
-          _HudStat(label: 'KM',     value: run.distanceKm.toStringAsFixed(2)),
+          _HudStat(label: 'KM', value: run.distanceKm.toStringAsFixed(2)),
           _HudDivider(),
-          _HudStat(label: 'RITMO',  value: run.formattedPace),
+          _HudStat(label: 'RITMO', value: run.formattedPace),
         ],
       ),
     );
@@ -214,13 +248,14 @@ class _HudStat extends StatelessWidget {
 
 class _HudDivider extends StatelessWidget {
   @override
-  Widget build(BuildContext context) =>
-      const SizedBox(height: 40, child: VerticalDivider(color: AppColors.border));
+  Widget build(BuildContext context) => const SizedBox(
+      height: 40, child: VerticalDivider(color: AppColors.border));
 }
 
 // ── Controles inferiores (corriendo) ──────────────────────────────────────────
 class _RunBottom extends StatelessWidget {
-  const _RunBottom({required this.run, required this.onPause, required this.onStop});
+  const _RunBottom(
+      {required this.run, required this.onPause, required this.onStop});
   final RunState run;
   final VoidCallback onPause;
   final VoidCallback onStop;
@@ -229,11 +264,11 @@ class _RunBottom extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.fromLTRB(
-        20, 20, 20, MediaQuery.of(context).padding.bottom + 20),
+          20, 20, 20, MediaQuery.of(context).padding.bottom + 20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
-          end:   Alignment.topCenter,
+          end: Alignment.topCenter,
           colors: [
             AppColors.background.withValues(alpha: 0.97),
             AppColors.background.withValues(alpha: 0),
@@ -248,7 +283,9 @@ class _RunBottom extends StatelessWidget {
           Row(
             children: [
               _CircleBtn(
-                icon:  run.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                icon: run.isPaused
+                    ? Icons.play_arrow_rounded
+                    : Icons.pause_rounded,
                 color: AppColors.surfaceAlt,
                 onTap: onPause,
               ),
@@ -257,7 +294,7 @@ class _RunBottom extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: onStop,
-                  icon:  const Icon(Icons.stop_rounded, size: 18),
+                  icon: const Icon(Icons.stop_rounded, size: 18),
                   label: const Text('Finalizar'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.accent,
@@ -281,8 +318,7 @@ class _StatusHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!run.reachedMinDistance) {
-      final progress = (run.distanceMeters /
-              AppConstants.minRunDistanceMeters)
+      final progress = (run.distanceMeters / AppConstants.minRunDistanceMeters)
           .clamp(0.0, 1.0);
       return _ProgressBar(
         progress: progress,
@@ -301,7 +337,8 @@ class _StatusHint extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.flag_circle_rounded, color: AppColors.green, size: 20),
+          const Icon(Icons.flag_circle_rounded,
+              color: AppColors.green, size: 20),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
@@ -330,17 +367,16 @@ class _ResultCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final success = result == ZoneCaptureResult.success;
-    final color   = success ? AppColors.green : AppColors.gold;
-    final title   = success
-        ? '¡Zona ${zoneName ?? ''} capturada!'
-        : 'Cerco cerrado';
+    final color = success ? AppColors.green : AppColors.gold;
+    final title =
+        success ? '¡Zona ${zoneName ?? ''} capturada!' : 'Cerco cerrado';
     final message = success
         ? 'Has conquistado este territorio. ¡Defiéndelo!'
         : ZoneCaptureService.messageFor(result);
 
     return Container(
       padding: EdgeInsets.fromLTRB(
-        24, 28, 24, MediaQuery.of(context).padding.bottom + 24),
+          24, 28, 24, MediaQuery.of(context).padding.bottom + 24),
       decoration: const BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -352,10 +388,12 @@ class _ResultCard extends StatelessWidget {
           Icon(success ? Icons.emoji_events_rounded : Icons.info_rounded,
               color: color, size: 48),
           const SizedBox(height: 12),
-          Text(title, style: AppTextStyles.headlineMedium, textAlign: TextAlign.center),
+          Text(title,
+              style: AppTextStyles.headlineMedium, textAlign: TextAlign.center),
           const SizedBox(height: 6),
           Text(message,
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center),
           const SizedBox(height: 24),
           ElevatedButton(
@@ -373,18 +411,19 @@ class _ResultCard extends StatelessWidget {
 }
 
 class _CircleBtn extends StatelessWidget {
-  const _CircleBtn({required this.icon, required this.color, required this.onTap});
+  const _CircleBtn(
+      {required this.icon, required this.color, required this.onTap});
   final IconData icon;
-  final Color    color;
+  final Color color;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color:        color,
-      shape:        const CircleBorder(),
+      color: color,
+      shape: const CircleBorder(),
       child: InkWell(
-        onTap:        onTap,
+        onTap: onTap,
         customBorder: const CircleBorder(),
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -410,10 +449,10 @@ class _ProgressBar extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
-            value:           progress,
+            value: progress,
             backgroundColor: AppColors.border,
             valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
-            minHeight:  6,
+            minHeight: 6,
           ),
         ),
       ],
