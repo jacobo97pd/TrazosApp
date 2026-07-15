@@ -9,6 +9,7 @@ import '../core/constants.dart';
 import '../dev/location_simulator.dart';
 import '../dev/sim_joystick.dart';
 import '../providers/run_provider.dart';
+import '../providers/zones_provider.dart';
 import '../services/zone_capture_service.dart';
 import '../widgets/adaptive_map.dart';
 
@@ -48,6 +49,7 @@ class _RunScreenState extends ConsumerState<RunScreen> {
   @override
   Widget build(BuildContext context) {
     final run = ref.watch(runProvider);
+    final zones = ref.watch(zonePolygonsProvider);
 
     // Seguir al usuario en el mapa
     ref.listen(runProvider.select((s) => s.currentPosition), (_, pos) {
@@ -114,7 +116,7 @@ class _RunScreenState extends ConsumerState<RunScreen> {
               initialZoom: 16.5,
               myLocationEnabled: true,
               lines: lines,
-              polygons: cerco,
+              polygons: [...zones, ...cerco],
               markers: markers,
               gesturesEnabled: false,
             ),

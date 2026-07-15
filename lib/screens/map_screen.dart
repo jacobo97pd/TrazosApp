@@ -167,7 +167,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final conqueredZones = ref.watch(conqueredPolygonsProvider);
+    final zones = ref.watch(zonePolygonsProvider);
     final mapReady = _darkMapStyle != null && _initialTarget != null;
 
     return Scaffold(
@@ -179,7 +179,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   initialTarget: _initialTarget!,
                   initialZoom: _initialZoom,
                   googleDarkStyle: _darkMapStyle,
-                  polygons: conqueredZones,
+                  polygons: zones,
                   markers: [
                     if (_pointerStyle == _Pointer.runner &&
                         _userLatLng != null &&

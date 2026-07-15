@@ -16,35 +16,39 @@ final zonesProvider = StreamProvider.autoDispose<List<ZoneModel>>((ref) {
           .toList());
 });
 
-// Polígonos de las zonas YA CONQUISTADas (con dueño) para pintarlas en el mapa
-// y que todos vean quién domina cada zona. Las zonas libres NO se pintan
-// (antes salían como manchas grises que no aportaban). AdaptiveMap las pinta
-// en Google Maps o Apple Maps según la plataforma.
-final conqueredPolygonsProvider =
-    Provider.autoDispose<List<MapPolygonData>>((ref) {
+// Polígonos de TODAS las zonas para pintarlas en el mapa y en la carrera:
+//  - Libres: contorno limpio con relleno muy suave (objetivo visible, sin el
+//    "manchón" gris de antes) para saber dónde correr y capturar.
+//  - Conquistadas: relleno translúcido con el color del dueño (solo/club) para
+//    que todos vean quién domina cada zona.
+// AdaptiveMap las pinta en Google Maps o Apple Maps según la plataforma.
+final zonePolygonsProvider = Provider.autoDispose<List<MapPolygonData>>((ref) {
   final zonesAsync = ref.watch(zonesProvider);
 
   return zonesAsync.maybeWhen(
-    data: (zones) => zones.where((z) => !z.isFree).map((zone) {
-      final fillColor = _zoneColor(zone);
+    data: (zones) => zones.map((zone) {
+      final color = _zoneColor(zone);
+      // Las libres apenas se rellenan (solo se marca el borde); las tomadas se
+      // rellenan más para que destaque el territorio conquistado.
+      final fillAlpha = zone.isFree ? 0.10 : 0.34;
       return MapPolygonData(
         id: zone.id,
         points: [
           for (final p in zone.polygon) MapPoint(p.latitude, p.longitude),
         ],
-        // Relleno translúcido: deja ver el mapa pero marca el territorio.
-        fillColor: fillColor.withValues(alpha: 0.34),
-        strokeColor: fillColor,
-        strokeWidth: 2,
+        fillColor: color.withValues(alpha: fillAlpha),
+        strokeColor: color.withValues(alpha: zone.isFree ? 0.9 : 1.0),
+        strokeWidth: zone.isFree ? 2 : 3,
       );
     }).toList(),
     orElse: () => const [],
   );
 });
 
-// Devuelve el color de fill según estado de la zona
+// Color de la zona según su estado. Las libres usan el acento (rosa) para que
+// se vean como objetivo capturable en mapa claro (Apple) u oscuro (Google).
 Color _zoneColor(ZoneModel zone) {
-  if (zone.isFree) return AppColors.zoneFree;
+  if (zone.isFree) return AppColors.accent;
   if (zone.isExpiring) return AppColors.zoneExpiring;
   if (zone.ownerType == OwnerType.club) return AppColors.zoneClub;
   return AppColors.zoneOwned;
