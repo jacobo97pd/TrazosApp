@@ -19,7 +19,7 @@ const REGION = "europe-west1";
 const ZONE_EXPIRATION_DAYS = 7;
 const MIN_POLYGON_POINTS   = 4;
 const MIN_PERIMETER_M      = 500;
-const MIN_OVERLAP_RATIO    = 0.60;
+const MIN_AREA_M2          = 1000; // territorio mínimo válido (~un bloque)
 // Anti-trampas por velocidad media (debe coincidir con AppConstants en el cliente).
 const MAX_AVG_SPEED_KMH    = 20;  // por encima ≈ bici/coche
 const MIN_AVG_SPEED_KMH    = 2;   // por debajo ≈ parado/deriva GPS
@@ -48,6 +48,30 @@ function toClosedRing(points) {
   return coords;
 }
 
+/**
+ * Devuelve la geometría turf (Feature<Polygon|MultiPolygon>) de una zona.
+ * Soporta el formato nuevo (geometryJson GeoJSON) y el viejo (polygon [{lat,lng}]).
+ * Devuelve null si no se puede parsear.
+ */
+function zoneFeature(zone) {
+  try {
+    if (typeof zone.geometryJson === "string" && zone.geometryJson.length > 0) {
+      return turf.feature(JSON.parse(zone.geometryJson));
+    }
+    if (Array.isArray(zone.polygon) && zone.polygon.length >= 3) {
+      return turf.polygon([toClosedRing(zone.polygon)]);
+    }
+  } catch {
+    /* geometría corrupta */
+  }
+  return null;
+}
+
+/** ¿Se solapan dos bboxes [minX,minY,maxX,maxY]? (rechazo rápido). */
+function bboxOverlap(a, b) {
+  return a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
+}
+
 /** Envía FCM sin lanzar si falla (token inválido, app desinstalada…). */
 async function sendFcm(token, title, body, data = {}) {
   if (!token) return;
@@ -64,177 +88,158 @@ async function sendFcm(token, title, body, data = {}) {
   }
 }
 
-// ── 1. validateCapture (callable) ────────────────────────────────────────────
+// ── 1. validateCapture (callable) — "reclamar territorio" ────────────────────
 //
-// Recibe: { polygonCoords: [{lat, lng}], zoneId: string }
-// Retorna: { success: bool, points?: number, reason?: string }
+// Modelo "territorio libre" (estilo paper.io): cierras un cerco donde quieras y
+// ese polígono pasa a ser TU territorio. Si pisa territorio de otros, se lo
+// recortas (turf.difference). Puntúas por área total controlada (totalAreaM2).
+// (Se mantiene el nombre validateCapture para reutilizar el servicio Cloud Run
+//  que ya tiene el permiso de invocación.)
 //
-// Validaciones (todas en servidor para evitar trampas):
-//   a) polygonCoords.length >= 4
-//   b) El GeoJSON cierra correctamente
-//   c) Perímetro >= 500 m
-//   d) booleanPointInPolygon(zone.centroid, runnerPolygon)
-//   e) Si zona con dueño: área(intersección) / área(zona) >= 60 %
-//   f) Anti-cheat: uid del token JWT == userId en contexto de auth
+// Recibe: { polygonCoords: [{lat,lng}], distanceMeters, durationSeconds }
+// Retorna: { success: bool, areaM2?: number, reason?: string }
 //
-// Si todo OK: actualiza zones/{zoneId} y users/{uid} en transacción atómica.
-// FCM al dueño anterior se envía FUERA de la transacción.
+// Validaciones en servidor: auth, >=4 puntos, polígono válido, distancia
+// >=500 m, velocidad de correr [2,20] km/h y área mínima.
 
 exports.validateCapture = onCall({ region: REGION }, async (request) => {
-  // f) Autenticación obligatoria
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Debes estar autenticado.");
   }
+  const uid = request.auth.uid;
+  const { polygonCoords, distanceMeters, durationSeconds } = request.data ?? {};
 
-  const uid              = request.auth.uid;
-  const { polygonCoords, zoneId } = request.data ?? {};
-
-  if (!Array.isArray(polygonCoords) || typeof zoneId !== "string") {
-    throw new HttpsError("invalid-argument", "Parámetros incorrectos.");
-  }
-
-  // a) Mínimo de puntos
-  if (polygonCoords.length < MIN_POLYGON_POINTS) {
+  if (!Array.isArray(polygonCoords) ||
+      polygonCoords.length < MIN_POLYGON_POINTS) {
     return { success: false, reason: "min_points" };
   }
 
-  // b) Construir GeoJSON (lanza si las coordenadas no son válidas)
-  let runnerPolygon;
+  let claim;
   try {
-    runnerPolygon = turf.polygon([toClosedRing(polygonCoords)]);
+    claim = turf.polygon([toClosedRing(polygonCoords)]);
   } catch {
     return { success: false, reason: "invalid_polygon" };
   }
 
-  // c) Perímetro mínimo — se usa el perímetro del polígono como proxy de distancia
-  const perimeterKm = turf.length(
-    turf.lineString(runnerPolygon.geometry.coordinates[0]),
-    { units: "kilometers" }
-  );
-  if (perimeterKm * 1000 < MIN_PERIMETER_M) {
+  // Distancia mínima: usa la real de la carrera si llega; si no, el perímetro.
+  const perimeterM = turf.length(
+    turf.lineString(claim.geometry.coordinates[0]), { units: "kilometers" }
+  ) * 1000;
+  const runDist = Number.isFinite(Number(distanceMeters))
+    ? Number(distanceMeters) : perimeterM;
+  if (runDist < MIN_PERIMETER_M) {
     return { success: false, reason: "insufficient_distance" };
   }
 
-  // c2) Anti-trampas por velocidad media (defensa en profundidad; el cliente
-  // también lo valida). Si no llegan los datos, no bloqueamos por esto.
-  const distM = Number(request.data?.distanceMeters);
-  const durS  = Number(request.data?.durationSeconds);
-  if (Number.isFinite(distM) && Number.isFinite(durS) && durS > 0) {
-    const avgKmh = (distM / 1000) / (durS / 3600);
+  // Anti-trampas por velocidad media.
+  const durS = Number(durationSeconds);
+  if (Number.isFinite(runDist) && Number.isFinite(durS) && durS > 0) {
+    const avgKmh = (runDist / 1000) / (durS / 3600);
     if (avgKmh > MAX_AVG_SPEED_KMH || avgKmh < MIN_AVG_SPEED_KMH) {
       return { success: false, reason: "invalid_speed" };
     }
   }
 
-  // ── Lectura + escritura atómica ──────────────────────────────────────────
-  const zoneRef = db.collection("zones").doc(zoneId);
-  const userRef = db.collection("users").doc(uid);
+  const claimArea = turf.area(claim);
+  if (claimArea < MIN_AREA_M2) {
+    return { success: false, reason: "area_too_small" };
+  }
 
-  // Capturamos datos del dueño anterior FUERA de la tx para enviar FCM después
-  let prevOwnerFcm = null;
+  const claimBbox = turf.bbox(claim);
 
-  const result = await db.runTransaction(async (tx) => {
-    const [zoneSnap, userSnap] = await Promise.all([
-      tx.get(zoneRef),
-      tx.get(userRef),
-    ]);
+  // Con pocos usuarios basta traer todas las zonas y filtrar por bbox.
+  const [zonesSnap, userSnap] = await Promise.all([
+    db.collection("zones").get(),
+    db.collection("users").doc(uid).get(),
+  ]);
+  const user = userSnap.data() ?? {};
+  const isClub = Boolean(user.clubId);
+  const ownerName = user.displayName ?? uid;
 
-    if (!zoneSnap.exists) {
-      return { success: false, reason: "zone_not_found" };
+  const batch = db.batch();
+  const areaDelta = {};       // ownerId -> variación de m² (para totalAreaM2)
+  const victims = new Set();  // ownerIds a los que se recorta (para FCM)
+
+  for (const doc of zonesSnap.docs) {
+    const z = doc.data();
+    const zGeom = zoneFeature(z);
+    if (!zGeom) continue;
+    if (!bboxOverlap(claimBbox, turf.bbox(zGeom))) continue;
+
+    let intersects = false;
+    try { intersects = turf.booleanIntersects(zGeom, claim); } catch { /* */ }
+    if (!intersects) continue;
+
+    const beforeArea = Number.isFinite(z.areaM2) ? z.areaM2 : turf.area(zGeom);
+
+    let diff;
+    try {
+      diff = turf.difference(turf.featureCollection([zGeom, claim]));
+    } catch {
+      continue; // si el recorte falla, no tocamos esa zona
     }
 
-    const zone = zoneSnap.data();
-    const user = userSnap.data() ?? {};
-    let prevOwnerRef = null;
-    let prevOwnerSnap = null;
-
-    if (zone.ownerId && zone.ownerId !== uid) {
-      prevOwnerRef = db.collection("users").doc(zone.ownerId);
-      prevOwnerSnap = await tx.get(prevOwnerRef);
-    }
-
-    // d) Centroide de la zona dentro del polígono del corredor
-    const centroidPoint = turf.point([
-      zone.centroid.longitude,
-      zone.centroid.latitude,
-    ]);
-    if (!turf.booleanPointInPolygon(centroidPoint, runnerPolygon)) {
-      return { success: false, reason: "centroid_not_inside" };
-    }
-
-    // e) Si la zona ya tiene dueño: cobertura mínima del 60 %
-    if (zone.ownerId) {
-      let zonePolygon;
-      try {
-        zonePolygon = turf.polygon([toClosedRing(zone.polygon)]);
-      } catch {
-        return { success: false, reason: "invalid_zone_polygon" };
-      }
-
-      const intersection = turf.intersect(
-        turf.featureCollection([runnerPolygon, zonePolygon])
-      );
-
-      if (!intersection) {
-        return { success: false, reason: "no_overlap" };
-      }
-
-      const overlapRatio = turf.area(intersection) / turf.area(zonePolygon);
-      if (overlapRatio < MIN_OVERLAP_RATIO) {
-        return {
-          success: false,
-          reason:  "insufficient_overlap",
-          overlap: Math.round(overlapRatio * 100),
-        };
-      }
-
-      // Guardar info para FCM post-transacción
-      if (zone.ownerId !== uid) {
-        prevOwnerFcm = { ownerId: zone.ownerId, zoneName: zone.name };
-      }
-    }
-
-    // ── Todo válido → escribir ────────────────────────────────────────────
-    const expiresAt = Timestamp.fromDate(
-      new Date(Date.now() + ZONE_EXPIRATION_DAYS * 24 * 60 * 60 * 1000)
-    );
-    const displayName = user.displayName ?? uid;
-    const isClub      = Boolean(user.clubId);
-
-    tx.update(zoneRef, {
-      ownerId:    uid,
-      ownerName:  displayName,
-      ownerType:  isClub ? "club" : "solo",
-      capturedAt: Timestamp.now(),
-      expiresAt,
-      color:      "#FF4D6D",
-    });
-
-    tx.update(userRef, {
-      capturedZones: FieldValue.arrayUnion(zoneId),
-    });
-
-    if (prevOwnerRef && prevOwnerSnap?.exists) {
-      tx.update(prevOwnerRef, {
-        capturedZones: FieldValue.arrayRemove(zoneId),
+    if (!diff) {
+      // Territorio totalmente cubierto → se elimina.
+      batch.delete(doc.ref);
+      areaDelta[z.ownerId] = (areaDelta[z.ownerId] || 0) - beforeArea;
+      if (z.ownerId && z.ownerId !== uid) victims.add(z.ownerId);
+    } else {
+      const afterArea = turf.area(diff);
+      if (afterArea >= beforeArea - 1) continue; // sin cambio apreciable
+      batch.update(doc.ref, {
+        geometryJson: JSON.stringify(diff.geometry),
+        areaM2: afterArea,
       });
+      areaDelta[z.ownerId] =
+        (areaDelta[z.ownerId] || 0) - (beforeArea - afterArea);
+      if (z.ownerId && z.ownerId !== uid) victims.add(z.ownerId);
     }
+  }
 
-    return { success: true, points: zone.points ?? 0 };
+  // Crear el territorio nuevo del usuario.
+  const newRef = db.collection("zones").doc();
+  const expiresAt = Timestamp.fromDate(
+    new Date(Date.now() + ZONE_EXPIRATION_DAYS * 24 * 60 * 60 * 1000)
+  );
+  batch.set(newRef, {
+    ownerId:      uid,
+    ownerName,
+    ownerType:    isClub ? "club" : "solo",
+    color:        "#FF4D6D",
+    geometryJson: JSON.stringify(claim.geometry),
+    areaM2:       claimArea,
+    city:         user.city ?? "",
+    capturedAt:   Timestamp.now(),
+    expiresAt,
   });
+  areaDelta[uid] = (areaDelta[uid] || 0) + claimArea;
 
-  // Enviar FCM al dueño anterior FUERA de la transacción
-  if (result.success && prevOwnerFcm) {
-    const prevDoc = await db.collection("users").doc(prevOwnerFcm.ownerId).get();
-    await sendFcm(
-      prevDoc.data()?.fcmToken,
-      "¡Te han robado una zona!",
-      `Alguien ha capturado ${prevOwnerFcm.zoneName}. ¡Recupérala!`,
-      { type: "zone_captured", zoneId }
+  // Actualizar el área total de cada afectado (ranking por km²).
+  for (const [ownerId, delta] of Object.entries(areaDelta)) {
+    if (!ownerId) continue;
+    batch.set(
+      db.collection("users").doc(ownerId),
+      { totalAreaM2: FieldValue.increment(delta),
+        lastActive: FieldValue.serverTimestamp() },
+      { merge: true }
     );
   }
 
-  return result;
+  await batch.commit();
+
+  // FCM a los que han perdido territorio (fuera del batch).
+  for (const ownerId of victims) {
+    const vDoc = await db.collection("users").doc(ownerId).get();
+    await sendFcm(
+      vDoc.data()?.fcmToken,
+      "¡Te han robado territorio!",
+      `${ownerName} ha conquistado parte de tu terreno. ¡Recupéralo!`,
+      { type: "territory_taken" }
+    );
+  }
+
+  return { success: true, areaM2: Math.round(claimArea) };
 });
 
 // ── 2. checkExpiredZones (scheduled, 03:00 UTC cada noche) ───────────────────
@@ -249,7 +254,6 @@ exports.checkExpiredZones = onSchedule(
     const snap = await db
       .collection("zones")
       .where("expiresAt", "<=", now)
-      .where("ownerId",   "!=", null)
       .get();
 
     if (snap.empty) {
@@ -257,46 +261,47 @@ exports.checkExpiredZones = onSchedule(
       return;
     }
 
-    // Recopilar datos de propietarios antes de limpiar
-    const fcmTasks = snap.docs.map(async (doc) => {
-      const zone = doc.data();
-      if (!zone.ownerId) return;
-      const ownerDoc = await db.collection("users").doc(zone.ownerId).get();
-      return sendFcm(
-        ownerDoc.data()?.fcmToken,
-        "Tu zona ha expirado",
-        `${zone.name} ha sido liberada. ¡Vuelve a correr para recuperarla!`,
-        { type: "zone_expired", zoneId: doc.id }
-      );
-    });
+    // Área a restar por dueño y a quién avisar.
+    const areaByOwner = {};
+    const fcmTasks = [];
 
-    // Limpiar zonas en batches (límite Firestore: 500 ops/batch)
+    // Borrar zonas caducadas en batches (límite Firestore: 500 ops/batch).
     const BATCH_SIZE = 400;
     for (let i = 0; i < snap.docs.length; i += BATCH_SIZE) {
       const batch = db.batch();
       snap.docs.slice(i, i + BATCH_SIZE).forEach((doc) => {
         const zone = doc.data();
-        batch.update(doc.ref, {
-          ownerId:    null,
-          ownerName:  null,
-          ownerType:  null,
-          capturedAt: null,
-          expiresAt:  null,
-          color:      null,
-        });
+        batch.delete(doc.ref);
         if (zone.ownerId) {
-          batch.update(db.collection("users").doc(zone.ownerId), {
-            capturedZones: FieldValue.arrayRemove(doc.id),
-          });
+          areaByOwner[zone.ownerId] =
+            (areaByOwner[zone.ownerId] || 0) + (Number(zone.areaM2) || 0);
         }
       });
       await batch.commit();
     }
 
-    // FCMs en paralelo — errores individuales no interrumpen el resto
+    // Restar el área caducada del total de cada dueño y avisarle.
+    const ownerBatch = db.batch();
+    for (const [ownerId, area] of Object.entries(areaByOwner)) {
+      ownerBatch.set(
+        db.collection("users").doc(ownerId),
+        { totalAreaM2: FieldValue.increment(-area) },
+        { merge: true }
+      );
+      fcmTasks.push((async () => {
+        const ownerDoc = await db.collection("users").doc(ownerId).get();
+        return sendFcm(
+          ownerDoc.data()?.fcmToken,
+          "Territorio expirado",
+          "Parte de tu territorio ha caducado. ¡Vuelve a correr para recuperarlo!",
+          { type: "zone_expired" }
+        );
+      })());
+    }
+    await ownerBatch.commit();
     await Promise.allSettled(fcmTasks);
 
-    console.log(`checkExpiredZones: ${snap.size} zona(s) liberada(s).`);
+    console.log(`checkExpiredZones: ${snap.size} zona(s) caducada(s) borrada(s).`);
   }
 );
 
@@ -429,18 +434,23 @@ exports.remindExpiring = onSchedule(
       .collection("zones")
       .where("expiresAt", ">",  now)
       .where("expiresAt", "<=", in24h)
-      .where("ownerId",   "!=", null)
       .get();
 
+    // Avisa una sola vez por dueño (aunque tenga varias zonas por expirar).
+    const owners = new Set();
+    for (const doc of snap.docs) {
+      const ownerId = doc.data().ownerId;
+      if (ownerId) owners.add(ownerId);
+    }
+
     await Promise.allSettled(
-      snap.docs.map(async (doc) => {
-        const zone    = doc.data();
-        const userDoc = await db.collection("users").doc(zone.ownerId).get();
+      [...owners].map(async (ownerId) => {
+        const userDoc = await db.collection("users").doc(ownerId).get();
         await sendFcm(
           userDoc.data()?.fcmToken,
-          "Defiende tu zona",
-          `${zone.name} expira en menos de 24 h. ¡Sal a correr!`,
-          { type: "zone_expiring", zoneId: doc.id }
+          "Defiende tu territorio",
+          "Parte de tu territorio expira en menos de 24 h. ¡Sal a correr!",
+          { type: "zone_expiring" }
         );
       })
     );

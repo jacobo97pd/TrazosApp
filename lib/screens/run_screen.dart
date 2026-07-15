@@ -174,7 +174,7 @@ class _RunScreenState extends ConsumerState<RunScreen> {
             child: run.captureResult != null
                 ? _ResultCard(
                     result: run.captureResult!,
-                    zoneName: run.capturedZoneName,
+                    areaM2: run.capturedAreaM2,
                     onFinish: _finish,
                   )
                 : _RunBottom(
@@ -359,21 +359,24 @@ class _StatusHint extends StatelessWidget {
 class _ResultCard extends StatelessWidget {
   const _ResultCard({
     required this.result,
-    required this.zoneName,
+    required this.areaM2,
     required this.onFinish,
   });
   final ZoneCaptureResult result;
-  final String? zoneName;
+  final int? areaM2;
   final VoidCallback onFinish;
 
   @override
   Widget build(BuildContext context) {
     final success = result == ZoneCaptureResult.success;
     final color = success ? AppColors.green : AppColors.gold;
-    final title =
-        success ? '¡Zona ${zoneName ?? ''} capturada!' : 'Cerco cerrado';
+    final title = success ? '¡Territorio conquistado!' : 'Cerco cerrado';
+    final area = areaM2 ?? 0;
+    final areaText = area >= 10000
+        ? '${(area / 1000000).toStringAsFixed(2)} km²'
+        : '$area m²';
     final message = success
-        ? 'Has conquistado este territorio. ¡Defiéndelo!'
+        ? 'Has conquistado $areaText. ¡Defiéndelo!'
         : ZoneCaptureService.messageFor(result);
 
     return Container(

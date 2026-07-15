@@ -12,7 +12,6 @@ import '../models/run_model.dart';
 import '../core/constants.dart';
 import '../dev/location_simulator.dart';
 import '../services/zone_capture_service.dart';
-import 'zones_provider.dart';
 
 // Auto-cierre del cerco: vuelves cerca del punto de inicio tras alejarte.
 const double _loopCloseRadiusMeters =
@@ -33,7 +32,7 @@ class RunState {
     this.distanceToStartMeters = 0.0,
     this.isCapturing = false,
     this.captureResult,
-    this.capturedZoneName,
+    this.capturedAreaM2,
     this.lastSaved,
   });
 
@@ -48,7 +47,7 @@ class RunState {
   final double distanceToStartMeters;
   final bool isCapturing;
   final ZoneCaptureResult? captureResult;
-  final String? capturedZoneName;
+  final int? capturedAreaM2;
   final RunModel? lastSaved;
 
   double get distanceKm => distanceMeters / 1000;
@@ -88,7 +87,7 @@ class RunState {
     double? distanceToStartMeters,
     bool? isCapturing,
     ZoneCaptureResult? captureResult,
-    String? capturedZoneName,
+    int? capturedAreaM2,
     RunModel? lastSaved,
   }) =>
       RunState(
@@ -104,7 +103,7 @@ class RunState {
             distanceToStartMeters ?? this.distanceToStartMeters,
         isCapturing: isCapturing ?? this.isCapturing,
         captureResult: captureResult ?? this.captureResult,
-        capturedZoneName: capturedZoneName ?? this.capturedZoneName,
+        capturedAreaM2: capturedAreaM2 ?? this.capturedAreaM2,
         lastSaved: lastSaved ?? this.lastSaved,
       );
 }
@@ -270,7 +269,8 @@ class RunNotifier extends Notifier<RunState> {
     _autoCapture();
   }
 
-  // Busca la zona cuyo centroide queda dentro del cerco y la intenta capturar.
+  // Reclama el cerco cerrado como territorio propio (el servidor valida y
+  // recorta lo que pise a otros).
   Future<void> _autoCapture() async {
     final polygon = state.polygon;
     if (polygon == null || polygon.length < AppConstants.minPolygonPoints) {
@@ -279,8 +279,7 @@ class RunNotifier extends Notifier<RunState> {
 
     state = state.copyWith(isCapturing: true);
 
-    // Anti-trampas: la velocidad media de toda la carrera debe ser de correr,
-    // no de bici/coche (ni de estar parado).
+    // Anti-trampas local (el servidor revalida): velocidad media de correr.
     final hours = state.durationSeconds / 3600.0;
     final avgKmh = hours > 0 ? (state.distanceMeters / 1000) / hours : 0.0;
     if (avgKmh > AppConstants.maxAvgSpeedKmh ||
@@ -293,43 +292,21 @@ class RunNotifier extends Notifier<RunState> {
       return;
     }
 
-    final zones = ref.read(zonesProvider).valueOrNull ?? const [];
-    final inside =
-        zones.where((z) => _pointInPolygon(z.centroid, polygon)).toList();
-
-    if (inside.isEmpty) {
-      await _saveRun();
-      state = state.copyWith(
-        isCapturing: false,
-        captureResult: ZoneCaptureResult.noZoneInArea,
-      );
-      return;
-    }
-
-    // Si hay varias, elige la más cercana al centro del recorrido.
-    final center = _routeCentroid(polygon);
-    inside.sort((a, b) =>
-        _distance(center, a.centroid).compareTo(_distance(center, b.centroid)));
-    final zone = inside.first;
-
-    final result = await ref.read(zoneCaptureServiceProvider).attemptCapture(
-          runnerPolygon: polygon,
-          zone: zone,
+    final res = await ref.read(zoneCaptureServiceProvider).claim(
+          polygon: polygon,
           distanceMeters: state.distanceMeters,
           durationSeconds: state.durationSeconds,
         );
 
-    await _saveRun(
-      capturedZoneId: result == ZoneCaptureResult.success ? zone.id : null,
-    );
+    await _saveRun(captured: res.result == ZoneCaptureResult.success);
     state = state.copyWith(
       isCapturing: false,
-      captureResult: result,
-      capturedZoneName: zone.name,
+      captureResult: res.result,
+      capturedAreaM2: res.areaM2,
     );
   }
 
-  Future<void> _saveRun({String? capturedZoneId}) async {
+  Future<void> _saveRun({bool captured = false}) async {
     if (state.lastSaved != null) return; // ya guardada
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null || state.route.isEmpty) return;
@@ -346,7 +323,7 @@ class RunNotifier extends Notifier<RunState> {
       startedAt: _startedAt ??
           DateTime.now().subtract(Duration(seconds: state.durationSeconds)),
       finishedAt: DateTime.now(),
-      capturedZoneId: capturedZoneId,
+      capturedZoneId: captured ? 'territory' : null,
     );
 
     await FirebaseFirestore.instance
@@ -405,38 +382,6 @@ class RunNotifier extends Notifier<RunState> {
         return const LocationSettings(
             accuracy: LocationAccuracy.high, distanceFilter: 5);
     }
-  }
-
-  // ── Geometría ────────────────────────────────────────────────────────────────
-
-  double _distance(LatLng a, LatLng b) => Geolocator.distanceBetween(
-        a.latitude,
-        a.longitude,
-        b.latitude,
-        b.longitude,
-      );
-
-  LatLng _routeCentroid(List<LatLng> pts) {
-    double lat = 0, lng = 0;
-    for (final p in pts) {
-      lat += p.latitude;
-      lng += p.longitude;
-    }
-    return LatLng(lat / pts.length, lng / pts.length);
-  }
-
-  // Point-in-polygon por ray casting (lat/lng como y/x; ok para áreas urbanas).
-  bool _pointInPolygon(LatLng point, List<LatLng> poly) {
-    bool inside = false;
-    for (int i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-      final xi = poly[i].longitude, yi = poly[i].latitude;
-      final xj = poly[j].longitude, yj = poly[j].latitude;
-      final intersect = ((yi > point.latitude) != (yj > point.latitude)) &&
-          (point.longitude <
-              (xj - xi) * (point.latitude - yi) / (yj - yi) + xi);
-      if (intersect) inside = !inside;
-    }
-    return inside;
   }
 }
 

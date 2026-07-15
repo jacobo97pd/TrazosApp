@@ -2,46 +2,38 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-import '../models/zone_model.dart';
 import '../core/constants.dart';
 
 enum ZoneCaptureResult {
   success,
   insufficientDistance,
-  noPolygon,
-  noZoneInArea,
-  centroidNotInPolygon,
-  insufficientOverlap,
   invalidSpeed,
-  serverError,
-  zoneNotFound,
+  areaTooSmall,
   invalidPolygon,
+  serverError,
 }
 
-// Razones devueltas por la Cloud Function → enum local
+// Razones devueltas por claimTerritory → enum local.
 const _reasonMap = {
-  'min_points':           ZoneCaptureResult.insufficientDistance,
+  'min_points':            ZoneCaptureResult.insufficientDistance,
   'insufficient_distance': ZoneCaptureResult.insufficientDistance,
-  'invalid_polygon':      ZoneCaptureResult.invalidPolygon,
-  'centroid_not_inside':  ZoneCaptureResult.centroidNotInPolygon,
-  'no_overlap':           ZoneCaptureResult.insufficientOverlap,
-  'insufficient_overlap': ZoneCaptureResult.insufficientOverlap,
-  'invalid_speed':        ZoneCaptureResult.invalidSpeed,
-  'zone_not_found':       ZoneCaptureResult.zoneNotFound,
+  'invalid_polygon':       ZoneCaptureResult.invalidPolygon,
+  'invalid_speed':         ZoneCaptureResult.invalidSpeed,
+  'area_too_small':        ZoneCaptureResult.areaTooSmall,
 };
 
 class ZoneCaptureService {
   ZoneCaptureService();
 
-  // Toda la validación ocurre en la Cloud Function; el cliente solo envía datos.
-  Future<ZoneCaptureResult> attemptCapture({
-    required List<LatLng> runnerPolygon,
-    required ZoneModel zone,
+  // Reclama como territorio propio el polígono cerrado de la carrera. Toda la
+  // validación (y el recorte a otros) ocurre en la Cloud Function claimTerritory.
+  Future<({ZoneCaptureResult result, int areaM2})> claim({
+    required List<LatLng> polygon,
     required double distanceMeters,
     required int durationSeconds,
   }) async {
-    if (runnerPolygon.length < AppConstants.minPolygonPoints) {
-      return ZoneCaptureResult.insufficientDistance;
+    if (polygon.length < AppConstants.minPolygonPoints) {
+      return (result: ZoneCaptureResult.insufficientDistance, areaM2: 0);
     }
 
     final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
@@ -49,8 +41,7 @@ class ZoneCaptureService {
 
     try {
       final result = await callable.call<Map<String, dynamic>>({
-        'zoneId': zone.id,
-        'polygonCoords': runnerPolygon
+        'polygonCoords': polygon
             .map((p) => {'lat': p.latitude, 'lng': p.longitude})
             .toList(),
         'distanceMeters':  distanceMeters,
@@ -58,31 +49,39 @@ class ZoneCaptureService {
       });
 
       final data = result.data;
-      if (data['success'] == true) return ZoneCaptureResult.success;
-
+      if (data['success'] == true) {
+        return (
+          result: ZoneCaptureResult.success,
+          areaM2: (data['areaM2'] as num?)?.toInt() ?? 0,
+        );
+      }
       final reason = data['reason'] as String? ?? '';
-      return _reasonMap[reason] ?? ZoneCaptureResult.serverError;
+      return (
+        result: _reasonMap[reason] ?? ZoneCaptureResult.serverError,
+        areaM2: 0,
+      );
     } on FirebaseFunctionsException {
-      // UNAUTHENTICATED, INVALID_ARGUMENT, etc.
-      return ZoneCaptureResult.serverError;
+      return (result: ZoneCaptureResult.serverError, areaM2: 0);
     } catch (_) {
-      return ZoneCaptureResult.serverError;
+      return (result: ZoneCaptureResult.serverError, areaM2: 0);
     }
   }
 
-  // Mensaje legible para el usuario según resultado
+  // Mensaje legible para el usuario según resultado.
   static String messageFor(ZoneCaptureResult result) => switch (result) {
-    ZoneCaptureResult.success               => '¡Zona capturada!',
-    ZoneCaptureResult.insufficientDistance  => 'Debes correr al menos 500 m.',
-    ZoneCaptureResult.noPolygon             => 'Cierra el cerco primero.',
-    ZoneCaptureResult.noZoneInArea          => 'Tu cerco no rodea ninguna zona.',
-    ZoneCaptureResult.centroidNotInPolygon  => 'Tu ruta no cubre el centro de la zona.',
-    ZoneCaptureResult.insufficientOverlap   => 'Debes cubrir al menos el 60 % de la zona.',
-    ZoneCaptureResult.invalidSpeed          => 'Velocidad no válida. El recorrido debe hacerse corriendo (sin bici/coche).',
-    ZoneCaptureResult.zoneNotFound          => 'Zona no encontrada.',
-    ZoneCaptureResult.invalidPolygon        => 'Polígono inválido. Vuelve a trazar la ruta.',
-    ZoneCaptureResult.serverError           => 'Error del servidor. Inténtalo de nuevo.',
-  };
+        ZoneCaptureResult.success =>
+          '¡Territorio conquistado!',
+        ZoneCaptureResult.insufficientDistance =>
+          'Debes correr al menos 500 m.',
+        ZoneCaptureResult.invalidSpeed =>
+          'Velocidad no válida. El recorrido debe hacerse corriendo (sin bici/coche).',
+        ZoneCaptureResult.areaTooSmall =>
+          'El área es muy pequeña. Haz un cerco más grande.',
+        ZoneCaptureResult.invalidPolygon =>
+          'Cerco inválido. Vuelve a trazar la ruta.',
+        ZoneCaptureResult.serverError =>
+          'Error del servidor. Inténtalo de nuevo.',
+      };
 }
 
 final zoneCaptureServiceProvider = Provider<ZoneCaptureService>(

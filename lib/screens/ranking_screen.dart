@@ -794,17 +794,10 @@ class _PodiumStats extends StatelessWidget {
       runSpacing: 6,
       children: [
         _MiniStat(
-          icon: Icons.bolt_rounded,
-          value: '${entry.score}',
-          label: 'pts',
+          icon: Icons.landscape_rounded,
+          value: _formatArea(entry.areaM2),
+          label: 'territorio',
           color: AppColors.gold,
-          compact: compact,
-        ),
-        _MiniStat(
-          icon: Icons.map_rounded,
-          value: '${entry.zones}',
-          label: 'zonas',
-          color: entry.accentColor,
           compact: compact,
         ),
         _MiniStat(
@@ -830,17 +823,10 @@ class _RankingStatsColumn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         _InlineStat(
-          icon: Icons.bolt_rounded,
-          label: '${entry.score}',
-          suffix: 'pts',
+          icon: Icons.landscape_rounded,
+          label: _formatArea(entry.areaM2),
+          suffix: '',
           color: AppColors.gold,
-        ),
-        const SizedBox(height: 6),
-        _InlineStat(
-          icon: Icons.map_rounded,
-          label: '${entry.zones}',
-          suffix: 'zonas',
-          color: entry.accentColor,
         ),
         const SizedBox(height: 6),
         _InlineStat(
@@ -1180,6 +1166,7 @@ class RankingEntry {
     required this.score,
     required this.initials,
     required this.accentColor,
+    this.areaM2 = 0,
     this.imageUrl,
     this.badge,
     this.trendIcon,
@@ -1192,6 +1179,7 @@ class RankingEntry {
   final int zones;
   final double km;
   final int score;
+  final double areaM2;
   final String initials;
   final Color accentColor;
   final String? imageUrl;
@@ -1235,7 +1223,8 @@ RankingEntry _entryFromUser(UserModel user) {
     subtitle: 'Nivel ${user.level}',
     zones: user.capturedZones.length,
     km: user.totalKm,
-    score: _scoreFor(user.capturedZones.length, user.totalKm),
+    areaM2: user.totalAreaM2,
+    score: user.totalAreaM2.round(), // ranking por área de territorio
     initials: _initials(name),
     accentColor: AppColors.accent,
     imageUrl: user.photoUrl,
@@ -1275,6 +1264,13 @@ String _formatKm(double km) {
   if (km >= 100) return km.toStringAsFixed(0);
   if (km == km.roundToDouble()) return km.toStringAsFixed(0);
   return km.toStringAsFixed(1);
+}
+
+// Área en km² si es grande, o m² si es pequeña.
+String _formatArea(double m2) {
+  if (m2 >= 100000) return '${(m2 / 1000000).toStringAsFixed(1)} km²';
+  if (m2 >= 10000) return '${(m2 / 1000000).toStringAsFixed(2)} km²';
+  return '${m2.round()} m²';
 }
 
 ImageProvider<Object>? _avatarImage(String? url) {

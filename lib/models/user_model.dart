@@ -13,6 +13,7 @@ class UserModel extends Equatable {
     this.clubId,
     this.level = 1,
     this.totalKm = 0.0,
+    this.totalAreaM2 = 0.0,
     this.capturedZones = const [],
     this.fcmToken,
     this.lastActive,
@@ -28,7 +29,10 @@ class UserModel extends Equatable {
   final String? clubId;
   final int    level;
   final double totalKm;
+  final double totalAreaM2; // área total de territorio controlado (ranking)
   final List<String> capturedZones;
+
+  double get totalAreaKm2 => totalAreaM2 / 1000000;
   final String? fcmToken;
   final DateTime? lastActive;
 
@@ -50,6 +54,7 @@ class UserModel extends Equatable {
       clubId:        d['clubId'] as String?,
       level:         (d['level'] as num?)?.toInt() ?? 1,
       totalKm:       (d['totalKm'] as num?)?.toDouble() ?? 0.0,
+      totalAreaM2:   (d['totalAreaM2'] as num?)?.toDouble() ?? 0.0,
       capturedZones: List<String>.from(d['capturedZones'] as List? ?? []),
       fcmToken:      d['fcmToken'] as String?,
       lastActive:    (d['lastActive'] as Timestamp?)?.toDate(),

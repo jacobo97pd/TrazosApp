@@ -28,12 +28,17 @@ class MapPolygonData {
     required this.fillColor,
     required this.strokeColor,
     this.strokeWidth = 2,
+    this.holes = const [],
   });
   final String id;
   final List<MapPoint> points;
   final Color fillColor;
   final Color strokeColor;
   final int strokeWidth;
+
+  /// Anillos interiores (agujeros). Solo se pintan en Google Maps; Apple Maps
+  /// no los soporta y se ignoran (se ve el contorno exterior relleno).
+  final List<List<MapPoint>> holes;
 }
 
 class MapLineData {
@@ -137,6 +142,10 @@ class AdaptiveMap extends StatelessWidget {
             polygonId: gmap.PolygonId(p.id),
             points: [
               for (final pt in p.points) gmap.LatLng(pt.latitude, pt.longitude),
+            ],
+            holes: [
+              for (final hole in p.holes)
+                [for (final pt in hole) gmap.LatLng(pt.latitude, pt.longitude)],
             ],
             fillColor: p.fillColor,
             strokeColor: p.strokeColor,
