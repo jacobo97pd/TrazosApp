@@ -131,5 +131,17 @@ service cloud.firestore {
         && request.auth.uid in resource.data.participants;
       allow delete: if false;
     }
+
+    // ── Zapatillas y enlaces (privados del dueño) ────────────────────────
+    match /shoes/{shoeId} {
+      allow read, delete: if isAuth() && resource.data.userId == request.auth.uid;
+      allow create, update: if isAuth()
+        && request.resource.data.userId == request.auth.uid;
+    }
+    match /shoeActivityLinks/{linkId} {
+      allow read, delete: if isAuth() && resource.data.userId == request.auth.uid;
+      allow create, update: if isAuth()
+        && request.resource.data.userId == request.auth.uid;
+    }
   }
 }
