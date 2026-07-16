@@ -18,6 +18,7 @@ import '../screens/club_events_screen.dart';
 import '../screens/create_event_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/runner_profile_screen.dart';
+import '../screens/challenges_screen.dart';
 
 // Clave del navigator raíz — permite navegar desde fuera del árbol de widgets
 // (p. ej. al tocar una notificación push en NotificationService).
@@ -36,6 +37,7 @@ abstract final class AppRoutes {
   static const createEvent = '/club/events/new';
   static const settings   = '/settings';
   static const runner     = '/runner'; // + /:uid
+  static const challenges = '/challenges';
   static const board      = '/home/board';
   static const ranking    = '/home/ranking';
   static const profile    = '/home/profile';
@@ -102,6 +104,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '${AppRoutes.runner}/:uid',
         builder: (_, state) =>
             RunnerProfileScreen(uid: state.pathParameters['uid']!),
+      ),
+      GoRoute(
+        path: AppRoutes.challenges,
+        builder: (_, __) => const ChallengesScreen(),
       ),
       ShellRoute(
         builder: (_, __, child) => ShellScreen(child: child),

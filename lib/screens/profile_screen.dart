@@ -8,6 +8,12 @@ import 'package:image_picker/image_picker.dart';
 
 import '../core/theme.dart';
 import '../core/router.dart';
+import '../progression/achievement_engine.dart';
+import '../progression/progression_providers.dart';
+import '../progression/runner_level_calculator.dart';
+import '../progression/runner_progress.dart';
+import '../progression/runner_star_calculator.dart';
+import '../widgets/star_rating.dart';
 import '../providers/auth_provider.dart';
 import '../models/user_model.dart';
 import '../services/strava_service.dart';
@@ -102,7 +108,9 @@ class _ProfileContent extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 20),
+        const _ProgressionSection(),
+        const SizedBox(height: 20),
 
         // ── Stats ─────────────────────────────────────────────────────────
         Row(
@@ -428,6 +436,88 @@ class _StravaCardState extends ConsumerState<_StravaCard> {
               ),
               child: Text(user.isStravaConnected ? 'Desconectar' : 'Conectar'),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Progresión (nivel, estrellas, XP, logros, acceso a Retos) ─────────────────
+class _ProgressionSection extends ConsumerWidget {
+  const _ProgressionSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final progress =
+        ref.watch(runnerProgressProvider).valueOrNull ?? const RunnerProgress();
+    final stats = ref.watch(runnerStatsProvider);
+    const levelCalc = RunnerLevelCalculator();
+    const starCalc = RunnerStarCalculator();
+    final lvl = levelCalc.fromTotalXp(progress.totalXp);
+    final star = starCalc.forLevel(lvl.level);
+
+    final statuses = const AchievementEngine()
+        .evaluate(stats, unlockedAt: progress.achievementUnlockDates);
+    final unlocked = statuses.where((s) => s.unlocked).length;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('Nivel ${lvl.level}', style: AppTextStyles.titleLarge),
+              const SizedBox(width: 10),
+              StarRating(stars: star.stars, size: 18),
+              const Spacer(),
+              Text(star.label, style: AppTextStyles.caption),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: lvl.progress,
+              backgroundColor: AppColors.border,
+              valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+              minHeight: 6,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text('${lvl.xpIntoLevel} / ${lvl.xpForLevel} XP',
+              style: AppTextStyles.caption),
+          const SizedBox(height: 14),
+          // Logros (icono en oro si desbloqueado).
+          Text('Logros · $unlocked/${statuses.length}',
+              style: AppTextStyles.labelMedium),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final s in statuses)
+                Icon(s.achievement.icon,
+                    size: 22,
+                    color: s.unlocked
+                        ? AppColors.gold
+                        : AppColors.border),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => context.push(AppRoutes.challenges),
+              icon: const Icon(Icons.emoji_events_outlined, size: 18),
+              label: const Text('Ver retos'),
+            ),
+          ),
         ],
       ),
     );
