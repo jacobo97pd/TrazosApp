@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -124,6 +125,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           ),
         );
   }
+
+  Future<void> _signInWithApple() async {
+    await ref.read(authNotifierProvider.notifier).signInWithApple();
+    if (!mounted) return;
+    ref.read(authNotifierProvider).whenOrNull(
+          error: (e, _) => ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('Error con Apple: $e'),
+                backgroundColor: AppColors.accent),
+          ),
+        );
+  }
+
+  // Apple exige "Sign in with Apple" en iOS si hay otros logins sociales.
+  // También funciona en web; en Android usamos Google como nativo.
+  bool get _showAppleButton =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
 
   @override
   Widget build(BuildContext context) {
@@ -255,6 +275,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   const Expanded(child: Divider()),
                 ]),
                 const SizedBox(height: 16),
+
+                // Botón Apple — login con Apple (obligatorio en iOS)
+                if (_showAppleButton) ...[
+                  ElevatedButton.icon(
+                    onPressed: isLoading ? null : _signInWithApple,
+                    icon: const Icon(Icons.apple, size: 22),
+                    label: const Text('Continuar con Apple'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
 
                 // Botón Strava — login con Strava
                 OutlinedButton.icon(

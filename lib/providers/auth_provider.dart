@@ -101,6 +101,25 @@ class AuthNotifier extends AsyncNotifier<void> {
     });
   }
 
+  // ── Login con Apple ───────────────────────────────────────────────────────
+  // iOS/macOS: flujo nativo "Sign in with Apple" (requiere el entitlement
+  // com.apple.developer.applesignin). Web: popup. Android: flujo web vía el
+  // Services ID configurado en Firebase.
+  Future<void> signInWithApple() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final provider = AppleAuthProvider()
+        ..addScope('email')
+        ..addScope('name');
+
+      final cred = kIsWeb
+          ? await FirebaseAuth.instance.signInWithPopup(provider)
+          : await FirebaseAuth.instance.signInWithProvider(provider);
+
+      if (cred.user != null) await _ensureUserDoc(cred.user!);
+    });
+  }
+
   // Crea el documento del usuario en Firestore si es su primer acceso.
   Future<void> _ensureUserDoc(User user) async {
     final ref = FirebaseFirestore.instance.collection('users').doc(user.uid);
