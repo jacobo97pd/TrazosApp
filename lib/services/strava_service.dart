@@ -13,6 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/constants.dart';
 import '../models/run_model.dart';
+import '../shoes/strava_gear.dart';
 
 // ── Claves SecureStorage ──────────────────────────────────────────────────────
 const _kAccessToken = 'strava_access_token';
@@ -509,6 +510,64 @@ class StravaService {
     });
 
     return totalKm;
+  }
+
+  // ── Equipamiento (zapatillas) ────────────────────────────────────────────────
+  // Lee las zapatillas del atleta y las actividades con su gear_id (scope read).
+  // NO modifica el equipamiento en Strava.
+
+  Future<List<StravaGear>> fetchShoes() async {
+    final token = await _validAccessToken();
+    if (token == null) return const [];
+    try {
+      final res = await _httpClient.get(
+        Uri.parse('https://www.strava.com/api/v3/athlete'),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 30));
+      if (res.statusCode != 200) return const [];
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final shoes = (data['shoes'] as List?) ?? const [];
+      return [
+        for (final s in shoes)
+          StravaGear(
+            id: '${s['id']}',
+            name: s['name'] as String? ?? '',
+            distanceMeters: (s['distance'] as num?)?.toDouble() ?? 0,
+          ),
+      ];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<List<StravaRunActivity>> fetchRunActivities({int maxPages = 5}) async {
+    final token = await _validAccessToken();
+    if (token == null) return const [];
+    final out = <StravaRunActivity>[];
+    try {
+      for (var page = 1; page <= maxPages; page++) {
+        final res = await _httpClient.get(
+          Uri.parse('https://www.strava.com/api/v3/athlete/activities'
+              '?per_page=200&page=$page'),
+          headers: {'Authorization': 'Bearer $token'},
+        ).timeout(const Duration(seconds: 30));
+        if (res.statusCode != 200) break;
+        final acts = jsonDecode(res.body) as List;
+        if (acts.isEmpty) break;
+        for (final a in acts) {
+          final type = a['type'] as String? ?? '';
+          if (type == 'Run' || type == 'TrailRun' || type == 'VirtualRun') {
+            out.add(StravaRunActivity(
+              id: '${a['id']}',
+              distanceMeters: (a['distance'] as num?)?.toDouble() ?? 0,
+              gearId: a['gear_id'] as String?,
+            ));
+          }
+        }
+        if (acts.length < 200) break;
+      }
+    } catch (_) {/* red caída: devolvemos lo que haya */}
+    return out;
   }
 
   void dispose() => _httpClient.close();

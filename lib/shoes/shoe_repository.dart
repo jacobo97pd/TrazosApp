@@ -5,6 +5,7 @@ import 'shoe_activity_link.dart';
 
 abstract interface class ShoeRepository {
   Stream<List<RunningShoe>> watch(String userId);
+  Future<List<RunningShoe>> shoesForUser(String userId);
   Future<void> save(RunningShoe shoe);
   Future<List<ShoeActivityLink>> linksForUser(String userId);
   Future<void> saveLink(ShoeActivityLink link);
@@ -19,6 +20,12 @@ class FirestoreShoeRepository implements ShoeRepository {
       .where('userId', isEqualTo: userId)
       .snapshots()
       .map((s) => s.docs.map(_shoeFrom).toList());
+
+  @override
+  Future<List<RunningShoe>> shoesForUser(String userId) async {
+    final s = await _shoes.where('userId', isEqualTo: userId).get();
+    return s.docs.map(_shoeFrom).toList();
+  }
 
   @override
   Future<void> save(RunningShoe s) =>
