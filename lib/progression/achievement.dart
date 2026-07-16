@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 
 /// Categoría del logro.
-enum AchievementCategory { distance, consistency, exploration, challenges, strava }
+enum AchievementCategory {
+  distance,
+  consistency,
+  exploration,
+  challenges,
+  strava
+}
 
 /// Rareza — SOLO visual, sin valor económico. Depende de la dificultad objetiva
 /// del hito, nunca de azar.
@@ -24,6 +30,11 @@ enum AchievementMetric {
   monthlyChallengeSweeps,
   stravaImports,
   stravaConnectedDays,
+  shoesRegistered,
+  retiredShoes,
+  shoesInRotation,
+  singleShoeMaxKm,
+  totalShoeKm,
 }
 
 /// Definición inmutable de un logro (hito permanente).
@@ -71,6 +82,11 @@ class RunnerStats {
     this.monthlyChallengeSweeps = 0,
     this.stravaImports = 0,
     this.stravaConnectedDays = 0,
+    this.shoesRegistered = 0,
+    this.retiredShoes = 0,
+    this.shoesInRotation = 0,
+    this.singleShoeMaxKm = 0,
+    this.totalShoeKm = 0,
   });
 
   final double totalKm;
@@ -88,6 +104,11 @@ class RunnerStats {
   final int monthlyChallengeSweeps;
   final int stravaImports;
   final int stravaConnectedDays;
+  final int shoesRegistered;
+  final int retiredShoes;
+  final int shoesInRotation;
+  final double singleShoeMaxKm;
+  final double totalShoeKm;
 
   num valueOf(AchievementMetric metric) => switch (metric) {
         AchievementMetric.totalKm => totalKm,
@@ -106,6 +127,11 @@ class RunnerStats {
         AchievementMetric.monthlyChallengeSweeps => monthlyChallengeSweeps,
         AchievementMetric.stravaImports => stravaImports,
         AchievementMetric.stravaConnectedDays => stravaConnectedDays,
+        AchievementMetric.shoesRegistered => shoesRegistered,
+        AchievementMetric.retiredShoes => retiredShoes,
+        AchievementMetric.shoesInRotation => shoesInRotation,
+        AchievementMetric.singleShoeMaxKm => singleShoeMaxKm,
+        AchievementMetric.totalShoeKm => totalShoeKm,
       };
 }
 

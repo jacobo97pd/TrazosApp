@@ -33,8 +33,7 @@ class RunnerProgress {
 
   final List<LevelUpEvent> levelHistory;
 
-  Set<String> get unlockedAchievementIds =>
-      achievementUnlockDates.keys.toSet();
+  Set<String> get unlockedAchievementIds => achievementUnlockDates.keys.toSet();
 
   RunnerProgress copyWith({
     int? totalXp,
@@ -49,8 +48,7 @@ class RunnerProgress {
             achievementUnlockDates ?? this.achievementUnlockDates,
         processedChallengeIds:
             processedChallengeIds ?? this.processedChallengeIds,
-        processedActivityIds:
-            processedActivityIds ?? this.processedActivityIds,
+        processedActivityIds: processedActivityIds ?? this.processedActivityIds,
         levelHistory: levelHistory ?? this.levelHistory,
       );
 }

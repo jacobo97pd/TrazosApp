@@ -17,7 +17,9 @@ class FirestoreRunnerProgressRepository implements RunnerProgressRepository {
 
   @override
   Future<void> save(String userId, RunnerProgress p) async {
-    await _users.doc(userId).set({'progression': toMap(p)}, SetOptions(merge: true));
+    await _users
+        .doc(userId)
+        .set({'progression': toMap(p)}, SetOptions(merge: true));
   }
 
   static Map<String, dynamic> toMap(RunnerProgress p) => {
@@ -36,10 +38,9 @@ class FirestoreRunnerProgressRepository implements RunnerProgressRepository {
     if (m == null) return const RunnerProgress();
     return RunnerProgress(
       totalXp: (m['totalXp'] as num?)?.toInt() ?? 0,
-      achievementUnlockDates:
-          (m['achievementUnlockDates'] as Map?)?.map((k, v) =>
-                  MapEntry(k as String, (v as Timestamp).toDate())) ??
-              const {},
+      achievementUnlockDates: (m['achievementUnlockDates'] as Map?)?.map(
+              (k, v) => MapEntry(k as String, (v as Timestamp).toDate())) ??
+          const {},
       processedChallengeIds:
           Set<String>.from(m['processedChallengeIds'] as List? ?? const []),
       processedActivityIds:

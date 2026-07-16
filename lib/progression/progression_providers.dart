@@ -10,17 +10,21 @@ import 'runner_progress.dart';
 import 'runner_progress_repository.dart';
 import 'runner_progression_service.dart';
 
-final runnerProgressRepositoryProvider =
-    Provider<RunnerProgressRepository>((_) => FirestoreRunnerProgressRepository());
+final runnerProgressRepositoryProvider = Provider<RunnerProgressRepository>(
+    (_) => FirestoreRunnerProgressRepository());
 
 const _service = RunnerProgressionService();
 
 // Estado de progresión del usuario actual (en vivo desde users/{uid}).
-final runnerProgressProvider = StreamProvider.autoDispose<RunnerProgress>((ref) {
+final runnerProgressProvider =
+    StreamProvider.autoDispose<RunnerProgress>((ref) {
   final uid = ref.watch(authStateProvider).valueOrNull?.uid;
   if (uid == null) return Stream.value(const RunnerProgress());
-  return FirebaseFirestore.instance.collection('users').doc(uid).snapshots().map(
-      (s) => FirestoreRunnerProgressRepository.fromMap(
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(uid)
+      .snapshots()
+      .map((s) => FirestoreRunnerProgressRepository.fromMap(
           s.data()?['progression'] as Map<String, dynamic>?));
 });
 
@@ -32,14 +36,16 @@ RunnerStats _statsFrom(UserModel? u, RunnerProgress p) => RunnerStats(
 
 final runnerStatsProvider = Provider.autoDispose<RunnerStats>((ref) {
   final u = ref.watch(userProfileProvider).valueOrNull;
-  final p = ref.watch(runnerProgressProvider).valueOrNull ?? const RunnerProgress();
+  final p =
+      ref.watch(runnerProgressProvider).valueOrNull ?? const RunnerProgress();
   return _statsFrom(u, p);
 });
 
 final challengeStatusesProvider =
     Provider.autoDispose<List<ChallengeStatus>>((ref) {
   final stats = ref.watch(runnerStatsProvider);
-  final p = ref.watch(runnerProgressProvider).valueOrNull ?? const RunnerProgress();
+  final p =
+      ref.watch(runnerProgressProvider).valueOrNull ?? const RunnerProgress();
   return [
     for (final c in kChallengesCatalog)
       ChallengeStatus(
