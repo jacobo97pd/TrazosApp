@@ -102,5 +102,22 @@ service cloud.firestore {
         isClubAdmin(resource.data.clubId)
       );
     }
+
+    // ── Conexiones sociales ──────────────────────────────────────────────
+    // Doc único por par (id = min_max). Solo los dos participantes lo ven/tocan;
+    // nadie aprueba en nombre de otro ni accede a conexiones ajenas.
+    match /connections/{connId} {
+      allow read: if isAuth() && request.auth.uid in resource.data.participants;
+      // Crear: el solicitante es quien escribe y se incluye como participante.
+      allow create: if isAuth()
+        && request.resource.data.requesterUserId == request.auth.uid
+        && request.auth.uid in request.resource.data.participants;
+      // Actualizar (aceptar/rechazar/eliminar/bloquear): solo un participante,
+      // y sin cambiar quiénes participan.
+      allow update: if isAuth()
+        && request.auth.uid in resource.data.participants
+        && request.resource.data.participants == resource.data.participants;
+      allow delete: if false; // no se borran; se marcan removed/blocked
+    }
   }
 }
