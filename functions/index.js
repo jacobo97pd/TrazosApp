@@ -205,6 +205,7 @@ exports.validateCapture = onCall({ region: REGION }, async (request) => {
   batch.set(newRef, {
     ownerId:      uid,
     ownerName,
+    ownerPhotoUrl: user.photoUrl ?? null,
     ownerType:    isClub ? "club" : "solo",
     color:        "#FF4D6D",
     geometryJson: JSON.stringify(claim.geometry),

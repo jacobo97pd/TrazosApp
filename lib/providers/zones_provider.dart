@@ -49,6 +49,56 @@ final zonePolygonsProvider = Provider.autoDispose<List<MapPolygonData>>((ref) {
   );
 });
 
+// Datos del marcador de avatar de un territorio (centro + dueño).
+typedef ZoneMarker = ({
+  String zoneId,
+  String ownerId,
+  String ownerName,
+  String? photoUrl,
+  Color color,
+  MapPoint center,
+});
+
+// Un marcador por territorio con dueño, colocado en su centro.
+final zoneMarkersProvider = Provider.autoDispose<List<ZoneMarker>>((ref) {
+  final zonesAsync = ref.watch(zonesProvider);
+
+  return zonesAsync.maybeWhen(
+    data: (zones) {
+      final out = <ZoneMarker>[];
+      for (final zone in zones) {
+        final ownerId = zone.ownerId;
+        if (ownerId == null) continue;
+        final rings = _parseGeometry(zone.geometryJson);
+        if (rings.isEmpty) continue;
+        // Anillo exterior más grande (proxy por nº de puntos).
+        final outer = rings
+            .map((r) => r.outer)
+            .reduce((a, b) => a.length >= b.length ? a : b);
+        out.add((
+          zoneId: zone.id,
+          ownerId: ownerId,
+          ownerName: zone.ownerName ?? 'Runner',
+          photoUrl: zone.ownerPhotoUrl,
+          color: _zoneColor(zone),
+          center: _centroid(outer),
+        ));
+      }
+      return out;
+    },
+    orElse: () => const [],
+  );
+});
+
+MapPoint _centroid(List<MapPoint> pts) {
+  double lat = 0, lng = 0;
+  for (final p in pts) {
+    lat += p.latitude;
+    lng += p.longitude;
+  }
+  return MapPoint(lat / pts.length, lng / pts.length);
+}
+
 // Parsea una geometría GeoJSON (Polygon | MultiPolygon). Las coordenadas van
 // como [lng, lat]; MapPoint es (lat, lng).
 List<_Ring> _parseGeometry(String json) {

@@ -11,6 +11,7 @@ class ZoneModel extends Equatable {
     required this.geometryJson,
     this.ownerId,
     this.ownerName,
+    this.ownerPhotoUrl,
     this.ownerType,
     this.areaM2 = 0,
     this.color,
@@ -22,6 +23,7 @@ class ZoneModel extends Equatable {
   final String geometryJson;
   final String? ownerId;
   final String? ownerName;
+  final String? ownerPhotoUrl;
   final OwnerType? ownerType;
   final double areaM2;
   final String? color;
@@ -46,9 +48,10 @@ class ZoneModel extends Equatable {
     return ZoneModel(
       id:          doc.id,
       geometryJson: d['geometryJson'] as String? ?? '',
-      ownerId:     d['ownerId'] as String?,
-      ownerName:   d['ownerName'] as String?,
-      ownerType:   parseOwnerType(d['ownerType'] as String?),
+      ownerId:      d['ownerId'] as String?,
+      ownerName:    d['ownerName'] as String?,
+      ownerPhotoUrl: d['ownerPhotoUrl'] as String?,
+      ownerType:    parseOwnerType(d['ownerType'] as String?),
       areaM2:      (d['areaM2'] as num?)?.toDouble() ?? 0,
       color:       d['color'] as String?,
       capturedAt:  (d['capturedAt'] as Timestamp?)?.toDate(),

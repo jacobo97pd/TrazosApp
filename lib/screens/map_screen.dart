@@ -13,6 +13,7 @@ import '../core/theme.dart';
 import '../providers/zones_provider.dart';
 import '../services/permissions_service.dart';
 import '../widgets/adaptive_map.dart';
+import '../widgets/avatar_marker.dart';
 
 // Centro de Madrid por defecto hasta tener la ubicacion del usuario.
 const _madridCenter = MapPoint(40.4168, -3.7038);
@@ -38,6 +39,35 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   MapPoint? _userLatLng;       // ubicación actual para el puntero
   Uint8List? _runnerIcon;      // PNG del puntero propio
   StreamSubscription<Position>? _posSub;
+
+  // Avatares de territorios (PNG), cacheados por dueño+foto+color.
+  final Map<String, Uint8List> _avatars = {};
+  final Set<String> _avatarLoading = {};
+
+  String _avatarKey(ZoneMarker m) =>
+      '${m.ownerId}|${m.photoUrl ?? ''}|${m.color.toARGB32()}';
+
+  // Genera (una vez) el avatar de cada territorio y refresca al terminar.
+  void _ensureAvatars(List<ZoneMarker> markers) {
+    for (final m in markers) {
+      final k = _avatarKey(m);
+      if (_avatars.containsKey(k) || _avatarLoading.contains(k)) continue;
+      _avatarLoading.add(k);
+      buildAvatarMarker(
+        photoUrl: m.photoUrl,
+        initials: initialsOf(m.ownerName),
+        ringColor: m.color,
+      ).then((bytes) {
+        if (!mounted) return;
+        setState(() {
+          _avatars[k] = bytes;
+          _avatarLoading.remove(k);
+        });
+      }).catchError((_) {
+        _avatarLoading.remove(k);
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -168,6 +198,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   Widget build(BuildContext context) {
     final zones = ref.watch(zonePolygonsProvider);
+    final zoneMarkers = ref.watch(zoneMarkersProvider);
+    _ensureAvatars(zoneMarkers);
     final mapReady = _darkMapStyle != null && _initialTarget != null;
 
     return Scaffold(
@@ -181,6 +213,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   googleDarkStyle: _darkMapStyle,
                   polygons: zones,
                   markers: [
+                    // Avatar del dueño de cada territorio (pinchable → perfil).
+                    for (final m in zoneMarkers)
+                      if (_avatars[_avatarKey(m)] != null)
+                        MapMarkerData(
+                          id: 'zone_${m.zoneId}',
+                          point: m.center,
+                          iconBytes: _avatars[_avatarKey(m)],
+                          onTap: () =>
+                              context.push('${AppRoutes.runner}/${m.ownerId}'),
+                        ),
                     if (_pointerStyle == _Pointer.runner &&
                         _userLatLng != null &&
                         _runnerIcon != null)

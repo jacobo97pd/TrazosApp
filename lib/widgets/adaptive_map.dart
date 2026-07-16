@@ -62,10 +62,12 @@ class MapMarkerData {
     required this.point,
     this.kind = MapMarkerKind.custom,
     this.iconBytes,
+    this.onTap,
   });
   final String id;
   final MapPoint point;
   final MapMarkerKind kind;
+  final VoidCallback? onTap;
 
   /// PNG del icono (p. ej. el puntero del corredor). Si es null se usa el pin
   /// por defecto (o verde para [MapMarkerKind.start]).
@@ -181,6 +183,7 @@ class AdaptiveMap extends StatelessWidget {
                     : gmap.BitmapDescriptor.defaultMarker),
             anchor: const Offset(0.5, 0.5),
             flat: m.iconBytes != null,
+            onTap: m.onTap,
           ),
       },
       myLocationEnabled: myLocationEnabled,
@@ -247,6 +250,7 @@ class AdaptiveMap extends StatelessWidget {
                         amap.BitmapDescriptor.hueGreen)
                     : amap.BitmapDescriptor.defaultAnnotation),
             anchor: const Offset(0.5, 0.5),
+            onTap: m.onTap,
           ),
       },
       myLocationEnabled: myLocationEnabled,
