@@ -20,6 +20,7 @@ import '../screens/settings_screen.dart';
 import '../screens/runner_profile_screen.dart';
 import '../screens/challenges_screen.dart';
 import '../screens/shoes_screen.dart';
+import '../screens/corredores_screen.dart';
 
 // Clave del navigator raíz — permite navegar desde fuera del árbol de widgets
 // (p. ej. al tocar una notificación push en NotificationService).
@@ -27,23 +28,24 @@ final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 // Rutas nombradas
 abstract final class AppRoutes {
-  static const splash     = '/';
+  static const splash = '/';
   static const onboarding = '/onboarding';
-  static const auth       = '/auth';
-  static const home       = '/home';
-  static const map        = '/home/map';
-  static const run        = '/run';
-  static const clubChat   = '/club/chat';
+  static const auth = '/auth';
+  static const home = '/home';
+  static const map = '/home/map';
+  static const run = '/run';
+  static const clubChat = '/club/chat';
   static const clubEvents = '/club/events';
   static const createEvent = '/club/events/new';
-  static const settings   = '/settings';
-  static const runner     = '/runner'; // + /:uid
+  static const settings = '/settings';
+  static const runner = '/runner'; // + /:uid
   static const challenges = '/challenges';
-  static const shoes      = '/shoes';
-  static const board      = '/home/board';
-  static const ranking    = '/home/ranking';
-  static const profile    = '/home/profile';
-  static const club       = '/home/club';
+  static const shoes = '/shoes';
+  static const corredores = '/corredores';
+  static const board = '/home/board';
+  static const ranking = '/home/ranking';
+  static const profile = '/home/profile';
+  static const club = '/home/club';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -66,7 +68,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == AppRoutes.splash;
 
       if (!isLoggedIn && !isOnAuthRoute) return AppRoutes.auth;
-      if (isLoggedIn && state.matchedLocation == AppRoutes.auth) return AppRoutes.home;
+      if (isLoggedIn && state.matchedLocation == AppRoutes.auth) {
+        return AppRoutes.home;
+      }
       return null;
     },
     routes: [
@@ -114,6 +118,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.shoes,
         builder: (_, __) => const ShoesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.corredores,
+        builder: (_, __) => const CorredoresScreen(),
       ),
       ShellRoute(
         builder: (_, __, child) => ShellScreen(child: child),

@@ -31,6 +31,11 @@ class ProfileScreen extends ConsumerWidget {
         title: const Text('Perfil'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.group_outlined),
+            onPressed: () => context.push(AppRoutes.corredores),
+            tooltip: 'Corredores',
+          ),
+          IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => context.push(AppRoutes.settings),
             tooltip: 'Ajustes',
