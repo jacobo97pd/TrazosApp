@@ -2,13 +2,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/theme.dart';
 import '../core/constants.dart';
 import '../core/router.dart';
 import '../services/strava_service.dart';
+import '../widgets/trazos_wordmark.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -85,57 +85,57 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Center(
-        child: AnimatedBuilder(
-          animation: _ctrl,
-          builder: (_, __) => Opacity(
-            opacity: _opacity.value,
-            child: Transform.scale(
-              scale: _scale.value,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(22),
-                    child: Image.asset(
-                      'assets/images/logo.png',
-                      width: 96,
-                      height: 96,
-                      fit: BoxFit.cover,
-                    ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/images/splash-fondo.jpeg',
+            fit: BoxFit.cover,
+          ),
+          Center(
+            child: AnimatedBuilder(
+              animation: _ctrl,
+              builder: (_, __) => Opacity(
+                opacity: _opacity.value,
+                child: Transform.scale(
+                  scale: _scale.value,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 96,
+                          height: 96,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const TrazosWordmark(width: 250),
+                      const SizedBox(height: 8),
+                      Text('Conquista la ciudad corriendo',
+                          style: AppTextStyles.bodyMedium
+                              .copyWith(color: AppColors.textSecondary)),
+                      if (_connectingStrava) ...[
+                        const SizedBox(height: 28),
+                        const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2.5, color: Color(0xFFFC4C02)),
+                        ),
+                        const SizedBox(height: 12),
+                        Text('Conectando con Strava…',
+                            style: AppTextStyles.caption),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'TRAZOS',
-                    style: GoogleFonts.cinzel(
-                      fontSize: 34,
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: 8,
-                      color: AppColors.textPrimary,
-                      height: 1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text('Conquista la ciudad corriendo',
-                      style: AppTextStyles.bodyMedium
-                          .copyWith(color: AppColors.textSecondary)),
-                  if (_connectingStrava) ...[
-                    const SizedBox(height: 28),
-                    const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2.5, color: Color(0xFFFC4C02)),
-                    ),
-                    const SizedBox(height: 12),
-                    Text('Conectando con Strava…',
-                        style: AppTextStyles.caption),
-                  ],
-                ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

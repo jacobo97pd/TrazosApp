@@ -9,6 +9,7 @@ import '../core/theme.dart';
 import '../core/router.dart';
 import '../providers/auth_provider.dart';
 import '../services/strava_service.dart';
+import '../widgets/trazos_wordmark.dart';
 
 // Paginas legales (Firebase Hosting).
 const _kTermsUrl = 'https://trazos-database.web.app/terms.html';
@@ -43,7 +44,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   // Restablecer contraseña: envía el correo de reset al email introducido.
@@ -62,8 +64,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   Future<void> _openLegal(String url) async {
-    final ok = await launchUrl(Uri.parse(url),
-        mode: LaunchMode.externalApplication);
+    final ok =
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     if (!ok) _snack('No se pudo abrir el enlace.');
   }
 
@@ -164,7 +166,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 24),
-                Text('Bienvenido a\nTrazos', style: AppTextStyles.displayLarge),
+                Text('Bienvenido a', style: AppTextStyles.displayLarge),
+                const SizedBox(height: 10),
+                const TrazosWordmark(width: 230),
                 const SizedBox(height: 8),
                 Text(
                   _mode == _AuthMode.signIn

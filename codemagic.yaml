@@ -37,8 +37,8 @@ workflows:
           unzip -q "$IPA_PATH" -d /tmp/trazos_ipa
           BUILD_NUMBER=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' /tmp/trazos_ipa/Payload/*.app/Info.plist)
           echo "IPA CFBundleVersion: $BUILD_NUMBER"
-          if [ "$BUILD_NUMBER" -le 27 ]; then
-            echo "CFBundleVersion must be greater than 27"
+          if [ "$BUILD_NUMBER" -le 28 ]; then
+            echo "CFBundleVersion must be greater than 28"
             exit 1
           fi
     artifacts:

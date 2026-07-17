@@ -14,6 +14,7 @@ import '../providers/zones_provider.dart';
 import '../services/permissions_service.dart';
 import '../widgets/adaptive_map.dart';
 import '../widgets/avatar_marker.dart';
+import '../widgets/trazos_wordmark.dart';
 
 // Centro de Madrid por defecto hasta tener la ubicacion del usuario.
 const _madridCenter = MapPoint(40.4168, -3.7038);
@@ -21,6 +22,7 @@ const _madridCenter = MapPoint(40.4168, -3.7038);
 // Estilo del puntero de ubicación. `runner` = icono propio (se genera en código);
 // `dot` = punto azul por defecto del mapa. Cambia esta constante para alternar.
 enum _Pointer { runner, dot }
+
 const _Pointer _pointerStyle = _Pointer.runner;
 
 /// Mapa limpio y no interactivo: muestra zonas, trazos y ubicacion.
@@ -36,8 +38,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   MapPoint? _initialTarget;
   double _initialZoom = 14.5;
 
-  MapPoint? _userLatLng;       // ubicación actual para el puntero
-  Uint8List? _runnerIcon;      // PNG del puntero propio
+  MapPoint? _userLatLng; // ubicación actual para el puntero
+  Uint8List? _runnerIcon; // PNG del puntero propio
   StreamSubscription<Position>? _posSub;
 
   // Avatares de territorios (PNG), cacheados por dueño+foto+color.
@@ -131,7 +133,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     canvas.drawCircle(center, size / 2,
         Paint()..color = AppColors.accent.withValues(alpha: 0.22));
-    canvas.drawCircle(center, size / 2 * 0.6, Paint()..color = AppColors.accent);
+    canvas.drawCircle(
+        center, size / 2 * 0.6, Paint()..color = AppColors.accent);
     canvas.drawCircle(
         center,
         size / 2 * 0.6,
@@ -263,13 +266,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      'TRAZOS',
-                      style: AppTextStyles.displayMedium.copyWith(
-                        letterSpacing: 3,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+                    const TrazosWordmark(width: 150),
                     const SizedBox(height: 2),
                     Text(
                       'Conquista las zonas, compite por ser el mejor',
