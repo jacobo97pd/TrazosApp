@@ -40,6 +40,7 @@ class ConquestPost {
     this.paceSnapshot = 0,
     this.elevationSnapshot = 0,
     this.likesCount = 0,
+    this.applauseCount = 0,
     this.commentsCount = 0,
     this.reportCount = 0,
     this.moderationStatus = 'ok',
@@ -72,6 +73,7 @@ class ConquestPost {
 
   // Contadores (los gestiona backend/transacción; el cliente no los altera).
   final int likesCount;
+  final int applauseCount;
   final int commentsCount;
   final int reportCount;
   final String moderationStatus; // ok | hidden | under_review | removed
@@ -89,6 +91,10 @@ class ConquestPost {
     bool? isDeleted,
     DateTime? updatedAt,
     String? moderationStatus,
+    int? likesCount,
+    int? applauseCount,
+    int? commentsCount,
+    int? reportCount,
   }) =>
       ConquestPost(
         id: id,
@@ -113,9 +119,10 @@ class ConquestPost {
         durationSnapshot: durationSnapshot,
         paceSnapshot: paceSnapshot,
         elevationSnapshot: elevationSnapshot,
-        likesCount: likesCount,
-        commentsCount: commentsCount,
-        reportCount: reportCount,
+        likesCount: likesCount ?? this.likesCount,
+        applauseCount: applauseCount ?? this.applauseCount,
+        commentsCount: commentsCount ?? this.commentsCount,
+        reportCount: reportCount ?? this.reportCount,
         moderationStatus: moderationStatus ?? this.moderationStatus,
       );
 }

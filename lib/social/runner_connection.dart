@@ -26,6 +26,7 @@ class RunnerConnection {
     this.acceptedAt,
     this.blockedAt,
     this.blockedBy,
+    this.blockedByUsers = const {},
   });
 
   final String id;
@@ -38,6 +39,12 @@ class RunnerConnection {
   final DateTime? acceptedAt;
   final DateTime? blockedAt;
   final String? blockedBy;
+  final Set<String> blockedByUsers;
+
+  /// Compatibilidad con documentos antiguos que solo guardaban [blockedBy].
+  bool isBlockedBy(String uid) =>
+      blockedByUsers.contains(uid) ||
+      (blockedByUsers.isEmpty && blockedBy == uid);
 
   /// Los dos participantes (ordenados) — usado en reglas y consultas.
   List<String> get participants {
@@ -63,6 +70,7 @@ class RunnerConnection {
     DateTime? acceptedAt,
     DateTime? blockedAt,
     String? blockedBy,
+    Set<String>? blockedByUsers,
   }) =>
       RunnerConnection(
         id: id,
@@ -75,5 +83,6 @@ class RunnerConnection {
         acceptedAt: acceptedAt ?? this.acceptedAt,
         blockedAt: blockedAt ?? this.blockedAt,
         blockedBy: blockedBy ?? this.blockedBy,
+        blockedByUsers: blockedByUsers ?? this.blockedByUsers,
       );
 }

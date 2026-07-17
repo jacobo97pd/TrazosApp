@@ -21,6 +21,8 @@ import '../screens/runner_profile_screen.dart';
 import '../screens/challenges_screen.dart';
 import '../screens/shoes_screen.dart';
 import '../screens/corredores_screen.dart';
+import '../screens/my_conquests_screen.dart';
+import '../screens/conquest_detail_screen.dart';
 
 // Clave del navigator raíz — permite navegar desde fuera del árbol de widgets
 // (p. ej. al tocar una notificación push en NotificationService).
@@ -31,8 +33,8 @@ abstract final class AppRoutes {
   static const splash = '/';
   static const onboarding = '/onboarding';
   static const auth = '/auth';
-  static const home = '/home';
-  static const map = '/home/map';
+  static const home = '/home/map';
+  static const map = home;
   static const run = '/run';
   static const clubChat = '/club/chat';
   static const clubEvents = '/club/events';
@@ -42,6 +44,8 @@ abstract final class AppRoutes {
   static const challenges = '/challenges';
   static const shoes = '/shoes';
   static const corredores = '/corredores';
+  static const conquests = '/conquests';
+  static const myConquests = '/conquests/mine';
   static const board = '/home/board';
   static const ranking = '/home/ranking';
   static const profile = '/home/profile';
@@ -122,6 +126,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.corredores,
         builder: (_, __) => const CorredoresScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.myConquests,
+        builder: (_, __) => const MyConquestsScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.conquests}/:postId',
+        builder: (_, state) => ConquestDetailScreen(
+          postId: state.pathParameters['postId']!,
+        ),
       ),
       ShellRoute(
         builder: (_, __, child) => ShellScreen(child: child),

@@ -69,6 +69,10 @@ class FirestoreRunnerConnectionRepository
       return null;
     }
 
+    final blockedBy = m['blockedBy'] as String?;
+    final blockedByUsers = (m['blockedByUsers'] as List<dynamic>? ?? const [])
+        .whereType<String>()
+        .toSet();
     return RunnerConnection(
       id: d.id,
       requesterUserId: m['requesterUserId'] as String,
@@ -81,7 +85,10 @@ class FirestoreRunnerConnectionRepository
       updatedAt: (m['updatedAt'] as Timestamp).toDate(),
       acceptedAt: (m['acceptedAt'] as Timestamp?)?.toDate(),
       blockedAt: (m['blockedAt'] as Timestamp?)?.toDate(),
-      blockedBy: m['blockedBy'] as String?,
+      blockedBy: blockedBy,
+      blockedByUsers: blockedByUsers.isEmpty && blockedBy != null
+          ? {blockedBy}
+          : blockedByUsers,
     );
   }
 }

@@ -51,6 +51,7 @@ class _CreatePostSheetState extends ConsumerState<_CreatePostSheet> {
       ConquestVisibility.onlyMe; // nunca público por defecto
   Uint8List? _pickedBytes;
   ConquestType _type = ConquestType.text;
+  bool _isStory = false;
   bool _busy = false;
 
   @override
@@ -88,16 +89,19 @@ class _CreatePostSheetState extends ConsumerState<_CreatePostSheet> {
         mediaUrl = up.mediaUrl;
         thumbUrl = up.thumbnailUrl;
       }
+      final now = DateTime.now();
       final post = ConquestPost(
         id: const Uuid().v4(),
         userId: uid,
         type: _pickedBytes != null ? _type : ConquestType.text,
         visibility: private ? ConquestVisibility.onlyMe : _visibility,
-        createdAt: DateTime.now(),
+        createdAt: now,
         activityId: widget.ctx.activityId,
         caption: _caption.text.trim(),
         mediaUrl: mediaUrl,
         thumbnailUrl: thumbUrl,
+        expiresAt:
+            _isStory ? ref.read(storyServiceProvider).expiresAtFrom(now) : null,
         zoneNameSnapshot: widget.ctx.zoneName,
         distanceSnapshot: widget.ctx.distanceMeters,
         durationSnapshot: widget.ctx.durationSeconds,
@@ -184,6 +188,16 @@ class _CreatePostSheetState extends ConsumerState<_CreatePostSheet> {
                 ],
               ),
             ],
+          ),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            value: _isStory,
+            activeThumbColor: AppColors.accent,
+            onChanged:
+                _busy ? null : (value) => setState(() => _isStory = value),
+            secondary: const Icon(Icons.auto_awesome_outlined),
+            title: const Text('Compartir como historia'),
+            subtitle: const Text('Desaparece automáticamente en 24 horas'),
           ),
           const SizedBox(height: 12),
           Row(

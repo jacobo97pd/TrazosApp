@@ -17,6 +17,7 @@ import '../widgets/star_rating.dart';
 import '../providers/auth_provider.dart';
 import '../models/user_model.dart';
 import '../services/strava_service.dart';
+import 'blocked_runners_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -48,9 +49,10 @@ class ProfileScreen extends ConsumerWidget {
         ],
       ),
       body: userAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.accent)),
-        error:   (e, _) => Center(child: Text('Error: $e')),
-        data:    (user) => user != null
+        loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.accent)),
+        error: (e, _) => Center(child: Text('Error: $e')),
+        data: (user) => user != null
             ? _ProfileContent(user: user)
             : const Center(child: Text('Sin datos de usuario')),
       ),
@@ -105,7 +107,8 @@ class _ProfileContent extends StatelessWidget {
                   Text(user.displayName, style: AppTextStyles.headlineLarge),
                   const SizedBox(height: 4),
                   Text(user.email,
-                      style: AppTextStyles.caption, overflow: TextOverflow.ellipsis),
+                      style: AppTextStyles.caption,
+                      overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 6),
                   _LevelBadge(level: user.level),
                 ],
@@ -120,27 +123,49 @@ class _ProfileContent extends StatelessWidget {
         // ── Stats ─────────────────────────────────────────────────────────
         Row(
           children: [
-            Expanded(child: _StatCard(
+            Expanded(
+                child: _StatCard(
               label: 'ZONAS',
               value: '${user.capturedZones.length}',
               color: AppColors.accent,
-              icon:  Icons.flag_rounded,
+              icon: Icons.flag_rounded,
             )),
             const SizedBox(width: 12),
-            Expanded(child: _StatCard(
+            Expanded(
+                child: _StatCard(
               label: 'KM TOTALES',
               value: user.totalKm.toStringAsFixed(0),
               color: AppColors.cyan,
-              icon:  Icons.route_rounded,
+              icon: Icons.route_rounded,
             )),
             const SizedBox(width: 12),
-            Expanded(child: _StatCard(
+            Expanded(
+                child: _StatCard(
               label: 'NIVEL',
               value: '${user.level}',
               color: AppColors.gold,
-              icon:  Icons.star_rounded,
+              icon: Icons.star_rounded,
             )),
           ],
+        ),
+        const SizedBox(height: 16),
+
+        _ProfileDestinationCard(
+          icon: Icons.landscape_outlined,
+          title: 'Mis conquistas',
+          subtitle: 'Publicaciones, recuerdos e historias',
+          onTap: () => context.push(AppRoutes.myConquests),
+        ),
+        const SizedBox(height: 12),
+        _ProfileDestinationCard(
+          icon: Icons.person_off_outlined,
+          title: 'Corredores bloqueados',
+          subtitle: 'Revisa y gestiona tus bloqueos',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const BlockedRunnersScreen(),
+            ),
+          ),
         ),
         const SizedBox(height: 24),
 
@@ -155,7 +180,7 @@ class _ProfileContent extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color:        AppColors.surface,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppColors.border),
           ),
@@ -167,6 +192,65 @@ class _ProfileContent extends StatelessWidget {
       ],
     );
   }
+}
+
+class _ProfileDestinationCard extends StatelessWidget {
+  const _ProfileDestinationCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: AppColors.accent),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: AppTextStyles.titleMedium),
+                      const SizedBox(height: 2),
+                      Text(subtitle, style: AppTextStyles.caption),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textSecondary,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
 }
 
 // Avatar tocable: muestra la foto (Strava o subida) con fallback a la inicial,
@@ -228,7 +312,8 @@ class _ProfileAvatarState extends ConsumerState<_ProfileAvatar> {
       child: Stack(
         children: [
           Container(
-            width: _size, height: _size,
+            width: _size,
+            height: _size,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.accent.withValues(alpha: 0.15),
@@ -250,22 +335,26 @@ class _ProfileAvatarState extends ConsumerState<_ProfileAvatar> {
           // Indicador de subida
           if (_uploading)
             Container(
-              width: _size, height: _size,
+              width: _size,
+              height: _size,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.background.withValues(alpha: 0.6),
               ),
               child: const Center(
                 child: SizedBox(
-                  width: 22, height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.accent),
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2.5, color: AppColors.accent),
                 ),
               ),
             ),
 
           // Badge de cámara
           Positioned(
-            right: 0, bottom: 0,
+            right: 0,
+            bottom: 0,
             child: Container(
               padding: const EdgeInsets.all(5),
               decoration: BoxDecoration(
@@ -305,7 +394,8 @@ class _LevelBadge extends StatelessWidget {
       child: Text(
         'Nivel $level',
         style: AppTextStyles.labelMedium.copyWith(
-          color: AppColors.background, fontWeight: FontWeight.w700,
+          color: AppColors.background,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -319,9 +409,9 @@ class _StatCard extends StatelessWidget {
     required this.color,
     required this.icon,
   });
-  final String   label;
-  final String   value;
-  final Color    color;
+  final String label;
+  final String value;
+  final Color color;
   final IconData icon;
 
   @override
@@ -329,7 +419,7 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        color:        AppColors.surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
@@ -337,8 +427,9 @@ class _StatCard extends StatelessWidget {
         children: [
           Icon(icon, color: color, size: 22),
           const SizedBox(height: 6),
-          Text(value, style: AppTextStyles.statNumber.copyWith(
-              color: color, fontSize: 24)),
+          Text(value,
+              style: AppTextStyles.statNumber
+                  .copyWith(color: color, fontSize: 24)),
           const SizedBox(height: 2),
           Text(label, style: AppTextStyles.statLabel),
         ],
@@ -362,7 +453,7 @@ class _StravaCardState extends ConsumerState<_StravaCard> {
     setState(() => _busy = true);
     try {
       final service = ref.read(stravaServiceProvider);
-      final tokens  = await service.connectStrava();
+      final tokens = await service.connectStrava();
       if (!mounted) return;
       if (tokens == null) {
         _snack('Conexión con Strava cancelada.');
@@ -390,8 +481,8 @@ class _StravaCardState extends ConsumerState<_StravaCard> {
     }
   }
 
-  void _snack(String msg) => ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(msg)));
+  void _snack(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   @override
   Widget build(BuildContext context) {
@@ -400,7 +491,7 @@ class _StravaCardState extends ConsumerState<_StravaCard> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color:        AppColors.surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: user.isStravaConnected
@@ -411,7 +502,9 @@ class _StravaCardState extends ConsumerState<_StravaCard> {
       child: Row(
         children: [
           Icon(Icons.directions_run_rounded,
-              color: user.isStravaConnected ? stravaOrange : AppColors.textSecondary),
+              color: user.isStravaConnected
+                  ? stravaOrange
+                  : AppColors.textSecondary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -429,15 +522,18 @@ class _StravaCardState extends ConsumerState<_StravaCard> {
           ),
           if (_busy)
             const SizedBox(
-              width: 20, height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: stravaOrange),
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: stravaOrange),
             )
           else
             TextButton(
               onPressed: user.isStravaConnected ? _disconnect : _connect,
               style: TextButton.styleFrom(
-                foregroundColor:
-                    user.isStravaConnected ? AppColors.textSecondary : stravaOrange,
+                foregroundColor: user.isStravaConnected
+                    ? AppColors.textSecondary
+                    : stravaOrange,
               ),
               child: Text(user.isStravaConnected ? 'Desconectar' : 'Conectar'),
             ),
@@ -509,9 +605,7 @@ class _ProgressionSection extends ConsumerWidget {
               for (final s in statuses)
                 Icon(s.achievement.icon,
                     size: 22,
-                    color: s.unlocked
-                        ? AppColors.gold
-                        : AppColors.border),
+                    color: s.unlocked ? AppColors.gold : AppColors.border),
             ],
           ),
           const SizedBox(height: 14),

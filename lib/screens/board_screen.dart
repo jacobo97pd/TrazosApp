@@ -7,51 +7,74 @@ import '../models/announcement_model.dart';
 import '../providers/announcements_provider.dart';
 import '../providers/events_provider.dart';
 import '../widgets/event_card.dart';
+import 'conquest_feed_view.dart';
 
-class BoardScreen extends ConsumerWidget {
+class BoardScreen extends StatelessWidget {
   const BoardScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) => DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            title: const Text('Comunidad'),
+            bottom: const TabBar(
+              tabs: [
+                Tab(text: 'Conquistas'),
+                Tab(text: 'Tablón'),
+              ],
+            ),
+          ),
+          body: const TabBarView(
+            children: [
+              ConquestFeedView(),
+              _BoardContent(),
+            ],
+          ),
+        ),
+      );
+}
+
+class _BoardContent extends ConsumerWidget {
+  const _BoardContent();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final annAsync = ref.watch(announcementsProvider);
-    final evAsync  = ref.watch(publicEventsProvider);
+    final evAsync = ref.watch(publicEventsProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Tablón')),
-      body: annAsync.when(
-        loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.accent)),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (announcements) {
-          // Solo eventos públicos futuros
-          final events = (evAsync.valueOrNull ?? [])
-              .where((e) => !e.isPast)
-              .toList();
+    return annAsync.when(
+      loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.accent)),
+      error: (e, _) => Center(child: Text('Error: $e')),
+      data: (announcements) {
+        // Solo eventos públicos futuros
+        final events =
+            (evAsync.valueOrNull ?? []).where((e) => !e.isPast).toList();
 
-          if (announcements.isEmpty && events.isEmpty) {
-            return const _EmptyBoard();
-          }
+        if (announcements.isEmpty && events.isEmpty) {
+          return const _EmptyBoard();
+        }
 
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            children: [
-              if (events.isNotEmpty) ...[
-                const _SectionHeader(
-                  title: 'Eventos abiertos',
-                  subtitle: 'Apúntate, tengas club o no',
-                ),
-                ...events.map((e) => EventCard(event: e, showClubName: true)),
-                const SizedBox(height: 12),
-              ],
-              if (announcements.isNotEmpty) ...[
-                const _SectionHeader(title: 'Anuncios'),
-                ...announcements.map((a) => _AnnouncementCard(item: a)),
-              ],
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          children: [
+            if (events.isNotEmpty) ...[
+              const _SectionHeader(
+                title: 'Eventos abiertos',
+                subtitle: 'Apúntate, tengas club o no',
+              ),
+              ...events.map((e) => EventCard(event: e, showClubName: true)),
+              const SizedBox(height: 12),
             ],
-          );
-        },
-      ),
+            if (announcements.isNotEmpty) ...[
+              const _SectionHeader(title: 'Anuncios'),
+              ...announcements.map((a) => _AnnouncementCard(item: a)),
+            ],
+          ],
+        );
+      },
     );
   }
 }
@@ -69,8 +92,7 @@ class _SectionHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title, style: AppTextStyles.headlineMedium),
-          if (subtitle != null)
-            Text(subtitle!, style: AppTextStyles.caption),
+          if (subtitle != null) Text(subtitle!, style: AppTextStyles.caption),
         ],
       ),
     );
@@ -94,8 +116,10 @@ class _EmptyBoard extends StatelessWidget {
             Text('No hay anuncios todavía',
                 style: AppTextStyles.titleMedium, textAlign: TextAlign.center),
             const SizedBox(height: 6),
-            Text('Aquí aparecerán novedades, ganadores y los mejores run clubs.',
-                style: AppTextStyles.caption, textAlign: TextAlign.center),
+            Text(
+                'Aquí aparecerán novedades, ganadores y los mejores run clubs.',
+                style: AppTextStyles.caption,
+                textAlign: TextAlign.center),
           ],
         ),
       ),
@@ -108,14 +132,26 @@ class _AnnouncementCard extends StatelessWidget {
   final AnnouncementModel item;
 
   ({IconData icon, Color color, String label}) get _meta => switch (item.type) {
-        AnnouncementType.ganador =>
-          (icon: Icons.emoji_events_rounded, color: AppColors.gold,   label: 'Ganador'),
-        AnnouncementType.club =>
-          (icon: Icons.groups_rounded,       color: AppColors.cyan,   label: 'Club'),
-        AnnouncementType.evento =>
-          (icon: Icons.event_rounded,        color: AppColors.accent, label: 'Evento'),
-        AnnouncementType.aviso =>
-          (icon: Icons.campaign_rounded,     color: AppColors.textSecondary, label: 'Aviso'),
+        AnnouncementType.ganador => (
+            icon: Icons.emoji_events_rounded,
+            color: AppColors.gold,
+            label: 'Ganador'
+          ),
+        AnnouncementType.club => (
+            icon: Icons.groups_rounded,
+            color: AppColors.cyan,
+            label: 'Club'
+          ),
+        AnnouncementType.evento => (
+            icon: Icons.event_rounded,
+            color: AppColors.accent,
+            label: 'Evento'
+          ),
+        AnnouncementType.aviso => (
+            icon: Icons.campaign_rounded,
+            color: AppColors.textSecondary,
+            label: 'Aviso'
+          ),
       };
 
   @override
@@ -127,7 +163,8 @@ class _AnnouncementCard extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: item.pinned ? m.color.withValues(alpha: 0.5) : AppColors.border,
+          color:
+              item.pinned ? m.color.withValues(alpha: 0.5) : AppColors.border,
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -180,7 +217,8 @@ class _AnnouncementCard extends StatelessWidget {
 }
 
 class _TypeBadge extends StatelessWidget {
-  const _TypeBadge({required this.icon, required this.color, required this.label});
+  const _TypeBadge(
+      {required this.icon, required this.color, required this.label});
   final IconData icon;
   final Color color;
   final String label;
@@ -199,8 +237,8 @@ class _TypeBadge extends StatelessWidget {
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 5),
           Text(label,
-              style: AppTextStyles.labelMedium.copyWith(
-                  color: color, fontWeight: FontWeight.w600)),
+              style: AppTextStyles.labelMedium
+                  .copyWith(color: color, fontWeight: FontWeight.w600)),
         ],
       ),
     );

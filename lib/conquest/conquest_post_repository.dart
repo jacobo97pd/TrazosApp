@@ -13,20 +13,25 @@ class FirestoreConquestPostRepository implements ConquestPostRepository {
   final _col = FirebaseFirestore.instance.collection('conquest_posts');
 
   @override
-  Future<void> create(ConquestPost p) => _col.doc(p.id).set(_to(p));
+  Future<void> create(ConquestPost p) {
+    _validateCaption(p.caption);
+    return _col.doc(p.id).set(_to(p));
+  }
 
   @override
-  Future<void> update(ConquestPost p) => _col.doc(p.id).set(
-        {
-          'visibility': p.visibility.name,
-          'caption': p.caption,
-          'isArchived': p.isArchived,
-          'isDeleted': p.isDeleted,
-          'moderationStatus': p.moderationStatus,
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      );
+  Future<void> update(ConquestPost p) {
+    _validateCaption(p.caption);
+    return _col.doc(p.id).set(
+      {
+        'visibility': p.visibility.name,
+        'caption': p.caption,
+        'isArchived': p.isArchived,
+        'isDeleted': p.isDeleted,
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
+  }
 
   @override
   Stream<List<ConquestPost>> watchForUser(String userId,
@@ -35,7 +40,15 @@ class FirestoreConquestPostRepository implements ConquestPostRepository {
           .where('userId', isEqualTo: userId)
           .where('isDeleted', isEqualTo: false)
           .snapshots()
-          .map((s) => s.docs.map(_from).toList());
+          .map((snapshot) {
+        final posts = snapshot.docs
+            .map(_from)
+            .where((post) =>
+                includePrivate || post.visibility != ConquestVisibility.onlyMe)
+            .toList();
+        posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return posts;
+      });
 
   static T _en<T>(List<T> v, String? n, T fb) {
     for (final e in v) {
@@ -44,11 +57,21 @@ class FirestoreConquestPostRepository implements ConquestPostRepository {
     return fb;
   }
 
+  static void _validateCaption(String caption) {
+    if (caption.length > 200) {
+      throw ArgumentError(
+        'No puede superar 200 caracteres.',
+        'caption',
+      );
+    }
+  }
+
   static Map<String, dynamic> _to(ConquestPost p) => {
         'userId': p.userId,
         'type': p.type.name,
         'visibility': p.visibility.name,
-        'createdAt': Timestamp.fromDate(p.createdAt),
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
         'zoneId': p.zoneId,
         'activityId': p.activityId,
         'challengeId': p.challengeId,
@@ -68,6 +91,7 @@ class FirestoreConquestPostRepository implements ConquestPostRepository {
         'elevationSnapshot': p.elevationSnapshot,
         // Contadores iniciales; el cliente no los sube en updates.
         'likesCount': 0,
+        'applauseCount': 0,
         'commentsCount': 0,
         'reportCount': 0,
         'moderationStatus': 'ok',
@@ -102,6 +126,7 @@ class FirestoreConquestPostRepository implements ConquestPostRepository {
       paceSnapshot: num_('paceSnapshot'),
       elevationSnapshot: num_('elevationSnapshot'),
       likesCount: (m['likesCount'] as num?)?.toInt() ?? 0,
+      applauseCount: (m['applauseCount'] as num?)?.toInt() ?? 0,
       commentsCount: (m['commentsCount'] as num?)?.toInt() ?? 0,
       reportCount: (m['reportCount'] as num?)?.toInt() ?? 0,
       moderationStatus: m['moderationStatus'] as String? ?? 'ok',
