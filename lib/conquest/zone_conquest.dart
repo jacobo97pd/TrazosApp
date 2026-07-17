@@ -25,7 +25,8 @@ class ZoneConquest {
 
   final String id;
   final String userId;
-  final String activityId; // run/actividad que la originó (clave de idempotencia)
+  final String
+      activityId; // run/actividad que la originó (clave de idempotencia)
   final String? zoneId;
   final DateTime createdAt;
 

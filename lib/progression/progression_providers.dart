@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../conquest/conquest_providers.dart';
 import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
 import 'achievement.dart';
@@ -29,16 +30,19 @@ final runnerProgressProvider =
 });
 
 // Métricas del corredor para retos/logros (las no rastreadas quedan en 0).
-RunnerStats _statsFrom(UserModel? u, RunnerProgress p) => RunnerStats(
+RunnerStats _statsFrom(UserModel? u, RunnerProgress p, int conquests) =>
+    RunnerStats(
       totalKm: u?.totalKm ?? 0,
       challengesCompleted: p.processedChallengeIds.length,
+      zonesConquered: conquests,
     );
 
 final runnerStatsProvider = Provider.autoDispose<RunnerStats>((ref) {
   final u = ref.watch(userProfileProvider).valueOrNull;
   final p =
       ref.watch(runnerProgressProvider).valueOrNull ?? const RunnerProgress();
-  return _statsFrom(u, p);
+  final conquests = ref.watch(conquestCountProvider);
+  return _statsFrom(u, p, conquests);
 });
 
 final challengeStatusesProvider =

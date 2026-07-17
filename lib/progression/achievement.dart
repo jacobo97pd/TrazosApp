@@ -35,6 +35,9 @@ enum AchievementMetric {
   shoesInRotation,
   singleShoeMaxKm,
   totalShoeKm,
+  zonesConquered,
+  sharedConquests,
+  citiesDocumented,
 }
 
 /// Definición inmutable de un logro (hito permanente).
@@ -87,6 +90,9 @@ class RunnerStats {
     this.shoesInRotation = 0,
     this.singleShoeMaxKm = 0,
     this.totalShoeKm = 0,
+    this.zonesConquered = 0,
+    this.sharedConquests = 0,
+    this.citiesDocumented = 0,
   });
 
   final double totalKm;
@@ -109,6 +115,9 @@ class RunnerStats {
   final int shoesInRotation;
   final double singleShoeMaxKm;
   final double totalShoeKm;
+  final int zonesConquered;
+  final int sharedConquests;
+  final int citiesDocumented;
 
   num valueOf(AchievementMetric metric) => switch (metric) {
         AchievementMetric.totalKm => totalKm,
@@ -132,6 +141,9 @@ class RunnerStats {
         AchievementMetric.shoesInRotation => shoesInRotation,
         AchievementMetric.singleShoeMaxKm => singleShoeMaxKm,
         AchievementMetric.totalShoeKm => totalShoeKm,
+        AchievementMetric.zonesConquered => zonesConquered,
+        AchievementMetric.sharedConquests => sharedConquests,
+        AchievementMetric.citiesDocumented => citiesDocumented,
       };
 }
 

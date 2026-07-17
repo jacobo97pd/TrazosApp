@@ -10,6 +10,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/run_model.dart';
 import '../core/constants.dart';
+import '../conquest/conquest_providers.dart';
+import '../conquest/zone_conquest.dart';
+import '../conquest/zone_conquest_service.dart';
 import '../dev/location_simulator.dart';
 import '../services/zone_capture_service.dart';
 
@@ -299,11 +302,36 @@ class RunNotifier extends Notifier<RunState> {
         );
 
     await _saveRun(captured: res.result == ZoneCaptureResult.success);
+    if (res.result == ZoneCaptureResult.success) {
+      await _recordConquest(res.areaM2);
+    }
     state = state.copyWith(
       isCapturing: false,
       captureResult: res.result,
       capturedAreaM2: res.areaM2,
     );
+  }
+
+  // Registra el hito permanente de conquista (idempotente por actividad). No
+  // bloquea la captura si falla.
+  Future<void> _recordConquest(int areaM2) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final run = state.lastSaved;
+    if (uid == null || run == null) return;
+    try {
+      final repo = ref.read(zoneConquestRepositoryProvider);
+      final existing = await repo.get(ZoneConquest.idFor(uid, run.id));
+      final r = const ZoneConquestService().record(
+        userId: uid,
+        activityId: run.id,
+        distanceMeters: run.distance,
+        durationSeconds: run.duration,
+        paceMinPerKm: run.avgPace ?? 0,
+        areaM2: areaM2.toDouble(),
+        existing: existing,
+      );
+      if (r.isNew) await repo.save(r.conquest);
+    } catch (_) {/* la conquista de territorio ya está; no bloquear por esto */}
   }
 
   Future<void> _saveRun({bool captured = false}) async {

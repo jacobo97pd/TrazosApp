@@ -143,5 +143,13 @@ service cloud.firestore {
       allow create, update: if isAuth()
         && request.resource.data.userId == request.auth.uid;
     }
+
+    // ── Conquistas (hito permanente del dueño) ───────────────────────────
+    match /zone_conquests/{cid} {
+      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+      allow create, update: if isAuth()
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if false; // borrado lógico (isDeleted), no físico
+    }
   }
 }
