@@ -510,13 +510,24 @@ class _ProgressionSection extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => context.push(AppRoutes.challenges),
-              icon: const Icon(Icons.emoji_events_outlined, size: 18),
-              label: const Text('Ver retos'),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push(AppRoutes.challenges),
+                  icon: const Icon(Icons.emoji_events_outlined, size: 18),
+                  label: const Text('Retos'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push(AppRoutes.shoes),
+                  icon: const Icon(Icons.directions_walk_rounded, size: 18),
+                  label: const Text('Zapatillas'),
+                ),
+              ),
+            ],
           ),
         ],
       ),

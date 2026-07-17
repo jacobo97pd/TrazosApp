@@ -1,6 +1,7 @@
 /// Zapatilla tal cual la da Strava (/athlete → shoes[]).
 class StravaGear {
-  const StravaGear({required this.id, required this.name, this.distanceMeters = 0});
+  const StravaGear(
+      {required this.id, required this.name, this.distanceMeters = 0});
   final String id;
   final String name;
   final double distanceMeters;

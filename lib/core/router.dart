@@ -19,6 +19,7 @@ import '../screens/create_event_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/runner_profile_screen.dart';
 import '../screens/challenges_screen.dart';
+import '../screens/shoes_screen.dart';
 
 // Clave del navigator raíz — permite navegar desde fuera del árbol de widgets
 // (p. ej. al tocar una notificación push en NotificationService).
@@ -38,6 +39,7 @@ abstract final class AppRoutes {
   static const settings   = '/settings';
   static const runner     = '/runner'; // + /:uid
   static const challenges = '/challenges';
+  static const shoes      = '/shoes';
   static const board      = '/home/board';
   static const ranking    = '/home/ranking';
   static const profile    = '/home/profile';
@@ -108,6 +110,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.challenges,
         builder: (_, __) => const ChallengesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.shoes,
+        builder: (_, __) => const ShoesScreen(),
       ),
       ShellRoute(
         builder: (_, __, child) => ShellScreen(child: child),
