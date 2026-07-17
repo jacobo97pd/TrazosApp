@@ -10,6 +10,7 @@ import '../dev/location_simulator.dart';
 import '../dev/sim_joystick.dart';
 import '../providers/run_provider.dart';
 import '../providers/zones_provider.dart';
+import 'create_post_sheet.dart';
 import '../services/zone_capture_service.dart';
 import '../widgets/adaptive_map.dart';
 
@@ -176,6 +177,15 @@ class _RunScreenState extends ConsumerState<RunScreen> {
                     result: run.captureResult!,
                     areaM2: run.capturedAreaM2,
                     onFinish: _finish,
+                    onLeaveMark: () => showCreatePostSheet(
+                      context,
+                      ConquestContext(
+                        activityId: run.lastSaved?.id,
+                        distanceMeters: run.distanceMeters,
+                        durationSeconds: run.durationSeconds,
+                        paceMinPerKm: run.avgPaceMinPerKm,
+                      ),
+                    ),
                   )
                 : _RunBottom(
                     run: run,
@@ -361,10 +371,12 @@ class _ResultCard extends StatelessWidget {
     required this.result,
     required this.areaM2,
     required this.onFinish,
+    this.onLeaveMark,
   });
   final ZoneCaptureResult result;
   final int? areaM2;
   final VoidCallback onFinish;
+  final VoidCallback? onLeaveMark;
 
   @override
   Widget build(BuildContext context) {
@@ -401,6 +413,14 @@ class _ResultCard extends StatelessWidget {
                   .copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center),
           const SizedBox(height: 24),
+          if (success && onLeaveMark != null) ...[
+            OutlinedButton.icon(
+              onPressed: onLeaveMark,
+              icon: const Icon(Icons.photo_camera_outlined, size: 18),
+              label: const Text('Dejar mi huella'),
+            ),
+            const SizedBox(height: 10),
+          ],
           ElevatedButton(
             onPressed: onFinish,
             style: ElevatedButton.styleFrom(

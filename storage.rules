@@ -21,6 +21,17 @@ service firebase.storage {
                    && request.resource.contentType.matches('image/.*');
     }
 
+    // Media de conquistas: escribe solo el dueño (ruta por uid, id generado).
+    // Lectura autenticada (la visibilidad fina se controla en Firestore; el
+    // control total por URL firmada queda para más adelante). Límite 8 MB.
+    match /conquest_media/{uid}/{fileName} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null
+                   && request.auth.uid == uid
+                   && request.resource.size < 8 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
     // Por defecto: todo lo demás denegado.
     match /{allPaths=**} {
       allow read, write: if false;

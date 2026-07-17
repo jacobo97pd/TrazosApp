@@ -151,5 +151,31 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid;
       allow delete: if false; // borrado lógico (isDeleted), no físico
     }
+
+    // ── Publicaciones de conquista ───────────────────────────────────────
+    match /conquest_posts/{pid} {
+      // Lee el dueño; o cualquiera si es pública, no borrada y visible.
+      allow read: if isAuth() && (
+        resource.data.userId == request.auth.uid ||
+        (resource.data.visibility == 'public' &&
+         resource.data.isDeleted == false &&
+         resource.data.moderationStatus == 'ok')
+      );
+      // Crear: el dueño, con contadores a cero y moderación 'ok'.
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.likesCount == 0
+        && request.resource.data.commentsCount == 0
+        && request.resource.data.reportCount == 0
+        && request.resource.data.moderationStatus == 'ok';
+      // Editar: el dueño, sin tocar contadores ni estado de moderación.
+      allow update: if isAuth()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.likesCount == resource.data.likesCount
+        && request.resource.data.commentsCount == resource.data.commentsCount
+        && request.resource.data.reportCount == resource.data.reportCount
+        && request.resource.data.moderationStatus == resource.data.moderationStatus;
+      allow delete: if false; // borrado lógico
+    }
   }
 }
