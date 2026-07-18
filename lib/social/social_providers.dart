@@ -103,6 +103,14 @@ class ConnectionController {
     }, SetOptions(merge: true));
   }
 
+  Future<void> setPrivate(bool value) async {
+    final uid = ref.read(authStateProvider).valueOrNull?.uid;
+    if (uid == null) return;
+    await FirebaseFirestore.instance.collection('users').doc(uid).set({
+      'social': {'private': value}
+    }, SetOptions(merge: true));
+  }
+
   Future<void> request(String other, ConnectionSource source) => _apply(
       other,
       (cur, me) => _svc.request(

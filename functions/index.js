@@ -996,7 +996,11 @@ async function loadConquestAudience(uid) {
       .collection("connections")
       .where("participants", "array-contains", uid)
       .get(),
-    db.collection("follows").where("followerId", "==", uid).get(),
+    db
+      .collection("follows")
+      .where("followerId", "==", uid)
+      .where("status", "==", "accepted")
+      .get(),
   ]);
   const accepted = new Set();
   const blocked = new Set();
@@ -1018,12 +1022,12 @@ async function loadConquestAudience(uid) {
   return { accepted, blocked };
 }
 
-/** ¿`follower` sigue a `followee`? Lee follows/{follower}_{followee}. */
+/** ¿`follower` sigue (aceptado) a `followee`? follows/{follower}_{followee}. */
 async function isFollowing(follower, followee, transaction = null) {
   if (follower === followee) return false;
   const ref = db.collection("follows").doc(`${follower}_${followee}`);
   const snap = transaction ? await transaction.get(ref) : await ref.get();
-  return snap.exists;
+  return snap.exists && snap.data().status === "accepted";
 }
 
 exports.getConquestFeed = onCall({ region: REGION }, async (request) => {
@@ -1625,18 +1629,44 @@ exports.onFollowWritten = onDocumentWritten(
   async (event) => {
     const before = event.data?.before;
     const after = event.data?.after;
-    // Solo al crearse (no en updates ni al dejar de seguir).
-    if ((before && before.exists) || !after || !after.exists) return;
+    const beforeData = before && before.exists ? before.data() : null;
+    const afterData = after && after.exists ? after.data() : null;
+    if (!afterData) return; // borrado (dejar de seguir / rechazar)
 
-    const follow = after.data() ?? {};
-    const followerId = follow.followerId;
-    const followeeId = follow.followeeId;
+    const followerId = afterData.followerId;
+    const followeeId = afterData.followeeId;
     if (typeof followerId !== "string" || typeof followeeId !== "string") return;
 
-    await notifyRunner(followeeId, followerId, {
-      titleFor: (name) => `${name} te sigue`,
-      body: "Toca para ver su perfil.",
-      data: { type: "new_follower", runnerId: followerId },
-    });
+    const wasStatus = beforeData?.status ?? null;
+    const nowStatus = afterData.status ?? "accepted";
+
+    // Nueva solicitud en cuenta privada → avisa al seguido.
+    if (!beforeData && nowStatus === "pending") {
+      await notifyRunner(followeeId, followerId, {
+        titleFor: (name) => `${name} quiere seguirte`,
+        body: "Toca para aceptar o rechazar la solicitud.",
+        data: { type: "follow_request", runnerId: followerId },
+      });
+      return;
+    }
+
+    // Nuevo seguidor directo (cuenta pública) → avisa al seguido.
+    if (!beforeData && nowStatus === "accepted") {
+      await notifyRunner(followeeId, followerId, {
+        titleFor: (name) => `${name} te sigue`,
+        body: "Toca para ver su perfil.",
+        data: { type: "new_follower", runnerId: followerId },
+      });
+      return;
+    }
+
+    // Solicitud aprobada (pending → accepted) → avisa al seguidor.
+    if (wasStatus === "pending" && nowStatus === "accepted") {
+      await notifyRunner(followerId, followeeId, {
+        titleFor: (name) => `${name} aceptó tu solicitud`,
+        body: "Ya puedes ver sus conquistas.",
+        data: { type: "follow_accepted", runnerId: followeeId },
+      });
+    }
   }
 );

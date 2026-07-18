@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/theme.dart';
 import '../dev/location_simulator.dart';
+import '../social/social_providers.dart';
 
 // Páginas legales (Firebase Hosting).
 const _kTermsUrl = 'https://trazos-database.web.app/terms.html';
@@ -109,6 +110,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ],
 
+          const _SectionHeader('Privacidad'),
+          _PrivateAccountTile(),
+
           const _SectionHeader('Aplicación'),
           _SettingsTile(
             icon: Icons.cleaning_services_outlined,
@@ -165,6 +169,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PrivateAccountTile extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isPrivate =
+        ref.watch(socialPrivacyProvider).valueOrNull?.private ?? false;
+    return SwitchListTile(
+      secondary:
+          const Icon(Icons.lock_outline_rounded, color: AppColors.textSecondary),
+      title: Text('Cuenta privada', style: AppTextStyles.bodyLarge),
+      subtitle: Text(
+        'Solo los seguidores que apruebes verán tus conquistas e historias. '
+        'Las solicitudes quedan pendientes hasta que las aceptes.',
+        style: AppTextStyles.caption,
+      ),
+      activeThumbColor: AppColors.accent,
+      value: isPrivate,
+      onChanged: (v) => ref.read(connectionControllerProvider).setPrivate(v),
     );
   }
 }

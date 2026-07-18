@@ -23,6 +23,7 @@ import '../screens/shoes_screen.dart';
 import '../screens/corredores_screen.dart';
 import '../screens/my_conquests_screen.dart';
 import '../screens/conquest_detail_screen.dart';
+import '../screens/follow_list_screen.dart';
 
 // Clave del navigator raíz — permite navegar desde fuera del árbol de widgets
 // (p. ej. al tocar una notificación push en NotificationService).
@@ -46,6 +47,8 @@ abstract final class AppRoutes {
   static const corredores = '/corredores';
   static const conquests = '/conquests';
   static const myConquests = '/conquests/mine';
+  static const follows = '/follows'; // + /:uid
+  static const followRequests = '/follow-requests';
   static const board = '/home/board';
   static const ranking = '/home/ranking';
   static const profile = '/home/profile';
@@ -136,6 +139,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => ConquestDetailScreen(
           postId: state.pathParameters['postId']!,
         ),
+      ),
+      GoRoute(
+        path: '${AppRoutes.follows}/:uid',
+        builder: (_, state) => FollowListScreen(
+          userId: state.pathParameters['uid']!,
+          showFollowingFirst: state.uri.queryParameters['tab'] == 'following',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.followRequests,
+        builder: (_, __) => const FollowRequestsScreen(),
       ),
       ShellRoute(
         builder: (_, __, child) => ShellScreen(child: child),

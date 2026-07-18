@@ -8,7 +8,12 @@ class SocialPrivacy {
     this.aggregatedOnly = true,
     this.allowPrivateChallenges = true,
     this.appearInLeaderboards = false,
+    this.private = false,
   });
+
+  /// Cuenta privada: los seguidores deben ser aprobados y solo ellos ven las
+  /// conquistas/historias de nivel "conexiones".
+  final bool private;
 
   /// "Permitir que otros usuarios conectados a Strava me encuentren en Trazos".
   final bool discoverable;
@@ -25,6 +30,7 @@ class SocialPrivacy {
     bool? aggregatedOnly,
     bool? allowPrivateChallenges,
     bool? appearInLeaderboards,
+    bool? private,
   }) =>
       SocialPrivacy(
         discoverable: discoverable ?? this.discoverable,
@@ -34,6 +40,7 @@ class SocialPrivacy {
         allowPrivateChallenges:
             allowPrivateChallenges ?? this.allowPrivateChallenges,
         appearInLeaderboards: appearInLeaderboards ?? this.appearInLeaderboards,
+        private: private ?? this.private,
       );
 
   Map<String, dynamic> toMap() => {
@@ -43,6 +50,7 @@ class SocialPrivacy {
         'aggregatedOnly': aggregatedOnly,
         'allowPrivateChallenges': allowPrivateChallenges,
         'appearInLeaderboards': appearInLeaderboards,
+        'private': private,
       };
 
   factory SocialPrivacy.fromMap(Map<String, dynamic>? m) {
@@ -54,6 +62,7 @@ class SocialPrivacy {
       aggregatedOnly: m['aggregatedOnly'] as bool? ?? true,
       allowPrivateChallenges: m['allowPrivateChallenges'] as bool? ?? true,
       appearInLeaderboards: m['appearInLeaderboards'] as bool? ?? false,
+      private: m['private'] as bool? ?? false,
     );
   }
 }

@@ -49,11 +49,19 @@ service cloud.firestore {
     function isAcceptedConnection(firstUid, secondUid) {
       return hasConnectionStatus(firstUid, secondUid, 'accepted');
     }
-    // ¿`follower` sigue a `followee`? (doc follows/{follower}_{followee})
+    // ¿`follower` sigue (aceptado) a `followee`?
     function isFollowing(follower, followee) {
       return exists(
-        /databases/$(database)/documents/follows/$(follower + '_' + followee)
-      );
+          /databases/$(database)/documents/follows/$(follower + '_' + followee)
+        ) &&
+        get(/databases/$(database)/documents/follows/$(follower + '_' + followee))
+          .data.status == 'accepted';
+    }
+    // ¿La cuenta de `uid` es privada? (users/{uid}.social.private)
+    function accountIsPrivate(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid)) &&
+        get(/databases/$(database)/documents/users/$(uid))
+          .data.get('social', {}).get('private', false) == true;
     }
     function isBlockedConnection(firstUid, secondUid) {
       return hasConnectionStatus(firstUid, secondUid, 'blocked');
@@ -280,6 +288,8 @@ service cloud.firestore {
     // Cualquier autenticado puede leer (contadores de seguidores/seguidos).
     match /follows/{followId} {
       allow read: if isAuth();
+      // Crear: el seguidor. Estado inicial 'pending' si la cuenta destino es
+      // privada; 'accepted' si es pública (no puede autoconcederse 'accepted').
       allow create: if isAuth()
         && request.resource.data.followerId == request.auth.uid
         && request.resource.data.followeeId is string
@@ -287,11 +297,31 @@ service cloud.firestore {
         && followId == request.resource.data.followerId + '_' +
              request.resource.data.followeeId
         && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
         && request.resource.data.keys().hasOnly([
-          'followerId', 'followeeId', 'createdAt'
-        ]);
-      allow delete: if isAuth() && resource.data.followerId == request.auth.uid;
-      allow update: if false;
+          'followerId', 'followeeId', 'status', 'createdAt', 'updatedAt'
+        ])
+        && (
+          (accountIsPrivate(request.resource.data.followeeId) &&
+           request.resource.data.status == 'pending') ||
+          (!accountIsPrivate(request.resource.data.followeeId) &&
+           request.resource.data.status == 'accepted')
+        );
+      // Aprobar: solo el seguido pasa 'pending' → 'accepted'.
+      allow update: if isAuth()
+        && resource.data.followeeId == request.auth.uid
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'accepted'
+        && request.resource.data.followerId == resource.data.followerId
+        && request.resource.data.followeeId == resource.data.followeeId
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'updatedAt']);
+      // Borrar: el seguidor (dejar de seguir/cancelar) o el seguido (rechazar).
+      allow delete: if isAuth() && (
+        resource.data.followerId == request.auth.uid ||
+        resource.data.followeeId == request.auth.uid
+      );
     }
 
     // ── Retos privados ───────────────────────────────────────────────────

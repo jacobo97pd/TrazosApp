@@ -92,12 +92,15 @@ class NotificationService {
           context.go(AppRoutes.board);
         }
       case 'new_follower':
+      case 'follow_accepted':
         final runnerId = data['runnerId'] as String?;
         if (runnerId != null && runnerId.isNotEmpty) {
           context.push('${AppRoutes.runner}/$runnerId');
         } else {
           context.go(AppRoutes.board);
         }
+      case 'follow_request':
+        context.push(AppRoutes.followRequests);
       default:
         context.go(AppRoutes.home);
     }

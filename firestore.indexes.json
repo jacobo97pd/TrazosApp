@@ -35,6 +35,24 @@
       ]
     },
     {
+      "comment": "follows: audiencia y lista de seguidos por estado",
+      "collectionGroup": "follows",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "followerId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "comment": "follows: seguidores y solicitudes pendientes por estado",
+      "collectionGroup": "follows",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "followeeId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
       "comment": "getConquestStories con userId: historias activas de un corredor",
       "collectionGroup": "conquest_posts",
       "queryScope": "COLLECTION",

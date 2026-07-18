@@ -17,6 +17,7 @@ import '../widgets/star_rating.dart';
 import '../providers/auth_provider.dart';
 import '../models/user_model.dart';
 import '../services/strava_service.dart';
+import '../social/follow_providers.dart';
 import 'blocked_runners_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -116,6 +117,8 @@ class _ProfileContent extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        const _SocialSection(),
         const SizedBox(height: 20),
         const _ProgressionSection(),
         const SizedBox(height: 20),
@@ -192,6 +195,86 @@ class _ProfileContent extends StatelessWidget {
       ],
     );
   }
+}
+
+// Contadores de seguidores/seguidos + acceso a solicitudes pendientes.
+class _SocialSection extends ConsumerWidget {
+  const _SocialSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final uid = ref.watch(authStateProvider).valueOrNull?.uid;
+    if (uid == null) return const SizedBox.shrink();
+    final followers = ref.watch(followerCountProvider(uid)).valueOrNull;
+    final following = ref.watch(followingCountProvider(uid)).valueOrNull;
+    final pending = ref.watch(myPendingRequestsProvider).valueOrNull ?? const [];
+
+    return Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _CountButton(
+                  value: followers,
+                  label: 'Seguidores',
+                  onTap: () => context.push('${AppRoutes.follows}/$uid'),
+                ),
+              ),
+              Container(width: 1, height: 34, color: AppColors.border),
+              Expanded(
+                child: _CountButton(
+                  value: following,
+                  label: 'Siguiendo',
+                  onTap: () =>
+                      context.push('${AppRoutes.follows}/$uid?tab=following'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (pending.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _ProfileDestinationCard(
+            icon: Icons.person_add_alt_1_outlined,
+            title: 'Solicitudes de seguimiento',
+            subtitle:
+                '${pending.length} ${pending.length == 1 ? 'solicitud pendiente' : 'solicitudes pendientes'}',
+            onTap: () => context.push(AppRoutes.followRequests),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _CountButton extends StatelessWidget {
+  const _CountButton(
+      {required this.value, required this.label, required this.onTap});
+  final int? value;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Column(
+            children: [
+              Text(value?.toString() ?? '—', style: AppTextStyles.titleLarge),
+              const SizedBox(height: 2),
+              Text(label, style: AppTextStyles.caption),
+            ],
+          ),
+        ),
+      );
 }
 
 class _ProfileDestinationCard extends StatelessWidget {

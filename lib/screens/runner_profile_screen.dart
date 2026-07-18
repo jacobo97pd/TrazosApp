@@ -10,6 +10,7 @@ import '../core/router.dart';
 import '../core/theme.dart';
 import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
+import '../social/follow_repository.dart';
 import '../social/follow_providers.dart';
 import '../widgets/avatar_marker.dart';
 
@@ -61,8 +62,12 @@ class _Content extends ConsumerWidget {
     final hasPhoto = photo != null && photo.isNotEmpty;
     final myUid = ref.watch(authStateProvider).valueOrNull?.uid;
     final isSelf = myUid == uid;
-    final stories = ref.watch(runnerStoriesProvider(uid));
-    final followers = ref.watch(followerCountProvider(uid)).valueOrNull;
+    final status =
+        ref.watch(followStatusProvider(uid)).valueOrNull ?? FollowStatus.none;
+    final isPrivate =
+        ref.watch(runnerIsPrivateProvider(uid)).valueOrNull ?? false;
+    final canSeeContent =
+        isSelf || !isPrivate || status == FollowStatus.accepted;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -91,82 +96,150 @@ class _Content extends ConsumerWidget {
             style: AppTextStyles.headlineLarge,
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
-            followers == null
-                ? 'Nivel ${user.level}'
-                : 'Nivel ${user.level}  ·  $followers ${followers == 1 ? 'seguidor' : 'seguidores'}',
+            isPrivate ? 'Nivel ${user.level} · Cuenta privada' : 'Nivel ${user.level}',
             style: AppTextStyles.caption,
           ),
+          const SizedBox(height: 16),
+          _CountsRow(uid: uid),
           if (!isSelf) ...[
             const SizedBox(height: 16),
-            _FollowButton(uid: uid),
+            _FollowButton(uid: uid, status: status),
           ],
           const SizedBox(height: 24),
-          _StoriesRow(stories: stories),
-          Row(
-            children: [
-              Expanded(
-                child: _Stat(
-                  label: 'TERRITORIO',
-                  value: _formatArea(user.totalAreaM2),
-                  color: AppColors.gold,
+          if (canSeeContent) ...[
+            _StoriesRow(stories: ref.watch(runnerStoriesProvider(uid))),
+            Row(
+              children: [
+                Expanded(
+                  child: _Stat(
+                    label: 'TERRITORIO',
+                    value: _formatArea(user.totalAreaM2),
+                    color: AppColors.gold,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _Stat(
-                  label: 'KM TOTALES',
-                  value:
-                      user.totalKm.toStringAsFixed(user.totalKm >= 100 ? 0 : 1),
-                  color: AppColors.green,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _Stat(
+                    label: 'KM TOTALES',
+                    value: user.totalKm
+                        .toStringAsFixed(user.totalKm >= 100 ? 0 : 1),
+                    color: AppColors.green,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ] else
+            const _PrivateWall(),
         ],
       ),
     );
   }
 }
 
-class _FollowButton extends ConsumerWidget {
-  const _FollowButton({required this.uid});
+/// Contadores de seguidores/seguidos, tocables para ver las listas.
+class _CountsRow extends ConsumerWidget {
+  const _CountsRow({required this.uid});
   final String uid;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final following = ref.watch(isFollowingProvider(uid));
-    return following.when(
-      loading: () => const SizedBox(
-        height: 44,
-        child: Center(
-            child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2))),
-      ),
-      error: (_, __) => const SizedBox.shrink(),
-      data: (isFollowing) {
-        Future<void> toggle() => ref
-            .read(followControllerProvider)
-            .toggle(uid, currentlyFollowing: isFollowing);
-        return SizedBox(
-          width: double.infinity,
-          child: isFollowing
-              ? OutlinedButton.icon(
-                  onPressed: toggle,
-                  icon: const Icon(Icons.check_rounded, size: 18),
-                  label: const Text('Siguiendo'),
-                )
-              : ElevatedButton.icon(
-                  onPressed: toggle,
-                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                  label: const Text('Seguir'),
-                ),
-        );
-      },
+    final followers = ref.watch(followerCountProvider(uid)).valueOrNull;
+    final following = ref.watch(followingCountProvider(uid)).valueOrNull;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _CountChip(
+          value: followers,
+          label: 'Seguidores',
+          onTap: () => context.push('${AppRoutes.follows}/$uid'),
+        ),
+        const SizedBox(width: 12),
+        _CountChip(
+          value: following,
+          label: 'Siguiendo',
+          onTap: () => context.push('${AppRoutes.follows}/$uid?tab=following'),
+        ),
+      ],
     );
+  }
+}
+
+class _CountChip extends StatelessWidget {
+  const _CountChip(
+      {required this.value, required this.label, required this.onTap});
+  final int? value;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          child: Column(
+            children: [
+              Text(value?.toString() ?? '—', style: AppTextStyles.titleLarge),
+              Text(label, style: AppTextStyles.caption),
+            ],
+          ),
+        ),
+      );
+}
+
+class _PrivateWall extends StatelessWidget {
+  const _PrivateWall();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          children: [
+            const Icon(Icons.lock_outline_rounded,
+                size: 44, color: AppColors.textSecondary),
+            const SizedBox(height: 12),
+            Text('Esta cuenta es privada', style: AppTextStyles.titleMedium),
+            const SizedBox(height: 6),
+            Text(
+              'Sigue a este corredor para ver sus conquistas e historias.',
+              style: AppTextStyles.caption,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+}
+
+class _FollowButton extends ConsumerWidget {
+  const _FollowButton({required this.uid, required this.status});
+  final String uid;
+  final FollowStatus status;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    Future<void> toggle() =>
+        ref.read(followControllerProvider).toggle(uid, status);
+
+    final button = switch (status) {
+      FollowStatus.accepted => OutlinedButton.icon(
+          onPressed: toggle,
+          icon: const Icon(Icons.check_rounded, size: 18),
+          label: const Text('Siguiendo'),
+        ),
+      FollowStatus.pending => OutlinedButton.icon(
+          onPressed: toggle,
+          icon: const Icon(Icons.hourglass_top_rounded, size: 18),
+          label: const Text('Solicitado'),
+        ),
+      FollowStatus.none => ElevatedButton.icon(
+          onPressed: toggle,
+          icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+          label: const Text('Seguir'),
+        ),
+    };
+    return SizedBox(width: double.infinity, child: button);
   }
 }
 
