@@ -49,6 +49,12 @@ service cloud.firestore {
     function isAcceptedConnection(firstUid, secondUid) {
       return hasConnectionStatus(firstUid, secondUid, 'accepted');
     }
+    // ¿`follower` sigue a `followee`? (doc follows/{follower}_{followee})
+    function isFollowing(follower, followee) {
+      return exists(
+        /databases/$(database)/documents/follows/$(follower + '_' + followee)
+      );
+    }
     function isBlockedConnection(firstUid, secondUid) {
       return hasConnectionStatus(firstUid, secondUid, 'blocked');
     }
@@ -66,7 +72,8 @@ service cloud.firestore {
          !isBlockedConnection(request.auth.uid, post.userId) &&
          (post.visibility == 'public' ||
           (post.visibility == 'connections' &&
-           isAcceptedConnection(request.auth.uid, post.userId))));
+           (isAcceptedConnection(request.auth.uid, post.userId) ||
+            isFollowing(request.auth.uid, post.userId)))));
     }
     function isActiveStory(post) {
       return post.expiresAt is timestamp &&
@@ -266,6 +273,25 @@ service cloud.firestore {
           )
         );
       allow delete: if false; // no se borran; se marcan removed/blocked
+    }
+
+    // ── Seguidores (follow unidireccional) ───────────────────────────────
+    // Doc follows/{followerId}_{followeeId}. Lo crea/borra el propio seguidor.
+    // Cualquier autenticado puede leer (contadores de seguidores/seguidos).
+    match /follows/{followId} {
+      allow read: if isAuth();
+      allow create: if isAuth()
+        && request.resource.data.followerId == request.auth.uid
+        && request.resource.data.followeeId is string
+        && request.resource.data.followeeId != request.auth.uid
+        && followId == request.resource.data.followerId + '_' +
+             request.resource.data.followeeId
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.keys().hasOnly([
+          'followerId', 'followeeId', 'createdAt'
+        ]);
+      allow delete: if isAuth() && resource.data.followerId == request.auth.uid;
+      allow update: if false;
     }
 
     // ── Retos privados ───────────────────────────────────────────────────

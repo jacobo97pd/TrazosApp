@@ -78,10 +78,26 @@ class NotificationService {
       case 'zone_captured':
       case 'zone_expired':
       case 'zone_expiring':
+      case 'territory_taken':
         context.go(AppRoutes.map);
       case 'club_joined':
       case 'club_invite':
         context.go(AppRoutes.club);
+      case 'post_like':
+      case 'post_comment':
+        final postId = data['postId'] as String?;
+        if (postId != null && postId.isNotEmpty) {
+          context.push('${AppRoutes.conquests}/$postId');
+        } else {
+          context.go(AppRoutes.board);
+        }
+      case 'new_follower':
+        final runnerId = data['runnerId'] as String?;
+        if (runnerId != null && runnerId.isNotEmpty) {
+          context.push('${AppRoutes.runner}/$runnerId');
+        } else {
+          context.go(AppRoutes.board);
+        }
       default:
         context.go(AppRoutes.home);
     }

@@ -144,6 +144,21 @@ final conquestDetailProvider =
   return ref.watch(conquestFeedRepositoryProvider).fetchDetail(postId);
 });
 
+/// Historias activas de un corredor concreto (para su perfil publico).
+final runnerStoriesProvider = FutureProvider.autoDispose
+    .family<List<ConquestFeedItem>, String>((ref, userId) async {
+  final items = await ref
+      .watch(conquestFeedRepositoryProvider)
+      .fetchStories(limit: 30, userId: userId);
+  final now = DateTime.now();
+  return items
+      .where((item) =>
+          item.post.isStory &&
+          item.post.expiresAt != null &&
+          item.post.expiresAt!.isAfter(now))
+      .toList(growable: false);
+});
+
 final conquestStoriesProvider =
     FutureProvider.autoDispose<List<ConquestFeedItem>>((ref) async {
   final items =

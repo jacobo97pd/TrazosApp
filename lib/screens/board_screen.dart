@@ -2,18 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../conquest/conquest_feed_providers.dart';
 import '../core/theme.dart';
 import '../models/announcement_model.dart';
 import '../providers/announcements_provider.dart';
 import '../providers/events_provider.dart';
 import '../widgets/event_card.dart';
 import 'conquest_feed_view.dart';
+import 'create_post_sheet.dart';
 
-class BoardScreen extends StatelessWidget {
+class BoardScreen extends ConsumerWidget {
   const BoardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => DefaultTabController(
+  Widget build(BuildContext context, WidgetRef ref) => DefaultTabController(
         length: 2,
         child: Scaffold(
           backgroundColor: AppColors.background,
@@ -25,6 +27,19 @@ class BoardScreen extends StatelessWidget {
                 Tab(text: 'Tablón'),
               ],
             ),
+          ),
+          floatingActionButton: FloatingActionButton.extended(
+            backgroundColor: AppColors.accent,
+            icon: const Icon(Icons.add_a_photo_outlined),
+            label: const Text('Publicar'),
+            onPressed: () async {
+              await showCreatePostSheet(
+                context,
+                const ConquestContext(zoneName: 'tu recorrido'),
+              );
+              ref.invalidate(conquestFeedProvider);
+              ref.invalidate(conquestStoriesProvider);
+            },
           ),
           body: const TabBarView(
             children: [

@@ -12,7 +12,8 @@ abstract interface class ConquestFeedRepository {
 
   Future<ConquestFeedItem> fetchDetail(String postId);
 
-  Future<List<ConquestFeedItem>> fetchStories({int limit = 20});
+  /// Historias activas visibles. Si [userId] no es null, solo de ese corredor.
+  Future<List<ConquestFeedItem>> fetchStories({int limit = 20, String? userId});
 }
 
 class CallableConquestFeedRepository implements ConquestFeedRepository {
@@ -59,9 +60,13 @@ class CallableConquestFeedRepository implements ConquestFeedRepository {
   }
 
   @override
-  Future<List<ConquestFeedItem>> fetchStories({int limit = 20}) async {
+  Future<List<ConquestFeedItem>> fetchStories({
+    int limit = 20,
+    String? userId,
+  }) async {
     final result = await _functions.httpsCallable('getConquestStories').call({
       'limit': limit.clamp(1, 30),
+      if (userId != null && userId.isNotEmpty) 'userId': userId,
     });
     final data = _asMap(result.data);
     return (data['items'] as List? ?? const [])

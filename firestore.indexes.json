@@ -35,6 +35,19 @@
       ]
     },
     {
+      "comment": "getConquestStories con userId: historias activas de un corredor",
+      "collectionGroup": "conquest_posts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "visibility", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted", "order": "ASCENDING" },
+        { "fieldPath": "isArchived", "order": "ASCENDING" },
+        { "fieldPath": "moderationStatus", "order": "ASCENDING" },
+        { "fieldPath": "expiresAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "comment": "Mis conquistas: usuario, borrado logico y fecha descendente",
       "collectionGroup": "conquest_posts",
       "queryScope": "COLLECTION",

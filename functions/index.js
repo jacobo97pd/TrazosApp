@@ -119,6 +119,33 @@ async function sendFcm(token, title, body, data = {}) {
   }
 }
 
+/**
+ * Envía una push a `recipientId` originada por `actorId`. Resuelve el token del
+ * destinatario y el nombre del actor. No lanza si algo falta. `titleFor` recibe
+ * el nombre del actor y devuelve el título.
+ */
+async function notifyRunner(recipientId, actorId, { titleFor, body, data }) {
+  if (!recipientId || recipientId === actorId) return;
+  try {
+    const [recipientDoc, actorDoc] = await Promise.all([
+      db.collection("users").doc(recipientId).get(),
+      db.collection("users").doc(actorId).get(),
+    ]);
+    const token = recipientDoc.data()?.fcmToken;
+    if (!token) return;
+    const actorName = typeof actorDoc.data()?.displayName === "string" &&
+        actorDoc.data().displayName.trim().length > 0
+      ? actorDoc.data().displayName.trim()
+      : "Un corredor";
+    await sendFcm(token, titleFor(actorName), body, {
+      ...data,
+      actorId,
+    });
+  } catch (err) {
+    console.warn("notifyRunner failed:", err.code ?? err.message);
+  }
+}
+
 // ── 1. validateCapture (callable) — "reclamar territorio" ────────────────────
 //
 // Modelo "territorio libre" (estilo paper.io): cierras un cerco donde quieras y
@@ -817,7 +844,8 @@ function canAccessPost(uid, post, connection, options = {}) {
   if (!allowedModeration.has(post.moderationStatus ?? "ok")) return false;
 
   if (post.visibility === "public") return true;
-  return post.visibility === "connections" && connection?.status === "accepted";
+  if (post.visibility !== "connections") return false;
+  return connection?.status === "accepted" || options.following === true;
 }
 
 async function getConnectionBetween(a, b, transaction = null) {
@@ -963,10 +991,13 @@ function parseFeedCursor(value) {
 }
 
 async function loadConquestAudience(uid) {
-  const connectionSnapshot = await db
-    .collection("connections")
-    .where("participants", "array-contains", uid)
-    .get();
+  const [connectionSnapshot, followSnapshot] = await Promise.all([
+    db
+      .collection("connections")
+      .where("participants", "array-contains", uid)
+      .get(),
+    db.collection("follows").where("followerId", "==", uid).get(),
+  ]);
   const accepted = new Set();
   const blocked = new Set();
   for (const document of connectionSnapshot.docs) {
@@ -979,7 +1010,20 @@ async function loadConquestAudience(uid) {
     if (connection.status === "accepted") accepted.add(other);
     if (connection.status === "blocked") blocked.add(other);
   }
+  // Seguir a alguien equivale a poder ver sus conquistas de nivel "conexiones".
+  for (const document of followSnapshot.docs) {
+    const followeeId = document.data().followeeId;
+    if (typeof followeeId === "string") accepted.add(followeeId);
+  }
   return { accepted, blocked };
+}
+
+/** ¿`follower` sigue a `followee`? Lee follows/{follower}_{followee}. */
+async function isFollowing(follower, followee, transaction = null) {
+  if (follower === followee) return false;
+  const ref = db.collection("follows").doc(`${follower}_${followee}`);
+  const snap = transaction ? await transaction.get(ref) : await ref.get();
+  return snap.exists;
 }
 
 exports.getConquestFeed = onCall({ region: REGION }, async (request) => {
@@ -1075,16 +1119,23 @@ exports.getConquestFeed = onCall({ region: REGION }, async (request) => {
 exports.getConquestStories = onCall({ region: REGION }, async (request) => {
   const uid = requireCallableAuth(request);
   const limit = parseFeedLimit(request.data?.limit);
+  // Opcional: historias de un corredor concreto (perfil publico).
+  const authorFilter = typeof request.data?.userId === "string" &&
+      request.data.userId.length > 0
+    ? request.data.userId
+    : null;
   const { accepted, blocked } = await loadConquestAudience(uid);
   const now = Timestamp.now();
 
-  const snapshot = await db
+  let query = db
     .collection("conquest_posts")
     .where("visibility", "in", ["public", "connections"])
     .where("isDeleted", "==", false)
     .where("isArchived", "==", false)
     .where("moderationStatus", "==", "ok")
-    .where("expiresAt", ">", now)
+    .where("expiresAt", ">", now);
+  if (authorFilter) query = query.where("userId", "==", authorFilter);
+  const snapshot = await query
     .orderBy("expiresAt", "asc")
     .limit(FEED_SCAN_LIMIT)
     .get();
@@ -1153,7 +1204,8 @@ exports.setConquestReaction = onCall({ region: REGION }, async (request) => {
 
   const postRef = db.collection("conquest_posts").doc(postId);
   const reactionRef = postRef.collection("reactions").doc(uid);
-  return db.runTransaction(async (transaction) => {
+  let notifyOwnerId = null;
+  const result = await db.runTransaction(async (transaction) => {
     const postDocument = await transaction.get(postRef);
     if (!postDocument.exists) {
       throw new HttpsError("not-found", "La conquista no existe.");
@@ -1165,13 +1217,17 @@ exports.setConquestReaction = onCall({ region: REGION }, async (request) => {
         "No puedes reaccionar a tu propia conquista."
       );
     }
-    const connection = await getConnectionBetween(uid, post.userId, transaction);
-    if (!canAccessPost(uid, post, connection)) {
+    const [connection, following] = await Promise.all([
+      getConnectionBetween(uid, post.userId, transaction),
+      isFollowing(uid, post.userId, transaction),
+    ]);
+    if (!canAccessPost(uid, post, connection, { following })) {
       throw new HttpsError(
         "permission-denied",
         "No puedes reaccionar a esta conquista."
       );
     }
+    notifyOwnerId = post.userId;
 
     const reactionDocument = await transaction.get(reactionRef);
     const currentKind = reactionDocument.exists
@@ -1220,6 +1276,18 @@ exports.setConquestReaction = onCall({ region: REGION }, async (request) => {
       applauseCount,
     };
   });
+
+  // Notifica al autor solo cuando se AÑADE una reaccion nueva.
+  if (result.changed && result.reaction && notifyOwnerId) {
+    await notifyRunner(notifyOwnerId, uid, {
+      titleFor: (name) => result.reaction === "applause"
+        ? `${name} aplaudió tu conquista`
+        : `A ${name} le gusta tu conquista`,
+      body: "Toca para verla.",
+      data: { type: "post_like", postId },
+    });
+  }
+  return result;
 });
 
 exports.createConquestComment = onCall({ region: REGION }, async (request) => {
@@ -1238,14 +1306,18 @@ exports.createConquestComment = onCall({ region: REGION }, async (request) => {
     ? author.photoUrl
     : null;
 
-  return db.runTransaction(async (transaction) => {
+  let notifyOwnerId = null;
+  const result = await db.runTransaction(async (transaction) => {
     const postDocument = await transaction.get(postRef);
     if (!postDocument.exists) {
       throw new HttpsError("not-found", "La conquista no existe.");
     }
     const post = postDocument.data();
-    const connection = await getConnectionBetween(uid, post.userId, transaction);
-    if (!canAccessPost(uid, post, connection)) {
+    const [connection, following] = await Promise.all([
+      getConnectionBetween(uid, post.userId, transaction),
+      isFollowing(uid, post.userId, transaction),
+    ]);
+    if (!canAccessPost(uid, post, connection, { following })) {
       throw new HttpsError(
         "permission-denied",
         "No puedes comentar esta conquista."
@@ -1278,8 +1350,18 @@ exports.createConquestComment = onCall({ region: REGION }, async (request) => {
     transaction.update(postRef, {
       commentsCount: numericCount(post.commentsCount) + 1,
     });
+    if (post.userId !== uid) notifyOwnerId = post.userId;
     return { commentId, created: true };
   });
+
+  if (result.created && notifyOwnerId) {
+    await notifyRunner(notifyOwnerId, uid, {
+      titleFor: (name) => `${name} comentó tu conquista`,
+      body: text.length > 80 ? `${text.slice(0, 77)}…` : text,
+      data: { type: "post_comment", postId },
+    });
+  }
+  return result;
 });
 
 exports.deleteConquestComment = onCall({ region: REGION }, async (request) => {
@@ -1534,3 +1616,27 @@ exports.moderateConquestPost = onCall({ region: REGION }, async (request) => {
     return { changed: true, moderationStatus: status };
   });
 });
+
+// ── Seguir corredores: notifica al recibir un nuevo seguidor ─────────────────
+// El documento follows/{followerId}_{followeeId} lo crea el cliente (reglas).
+// Este trigger solo manda la push; no necesita permiso de invocacion.
+exports.onFollowWritten = onDocumentWritten(
+  { region: REGION, document: "follows/{followId}" },
+  async (event) => {
+    const before = event.data?.before;
+    const after = event.data?.after;
+    // Solo al crearse (no en updates ni al dejar de seguir).
+    if ((before && before.exists) || !after || !after.exists) return;
+
+    const follow = after.data() ?? {};
+    const followerId = follow.followerId;
+    const followeeId = follow.followeeId;
+    if (typeof followerId !== "string" || typeof followeeId !== "string") return;
+
+    await notifyRunner(followeeId, followerId, {
+      titleFor: (name) => `${name} te sigue`,
+      body: "Toca para ver su perfil.",
+      data: { type: "new_follower", runnerId: followerId },
+    });
+  }
+);
