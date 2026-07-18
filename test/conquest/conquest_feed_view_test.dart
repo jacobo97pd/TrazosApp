@@ -47,7 +47,10 @@ class _StoriesFeedRepository implements ConquestFeedRepository {
       const ConquestFeedPage(items: [], hasMore: false);
 
   @override
-  Future<List<ConquestFeedItem>> fetchStories({int limit = 20}) async {
+  Future<List<ConquestFeedItem>> fetchStories({
+    int limit = 20,
+    String? userId,
+  }) async {
     storyRequests += 1;
     final post = ConquestPost(
       id: 'story-1',

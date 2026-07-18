@@ -103,6 +103,6 @@ class _ControlledFeedRepository implements ConquestFeedRepository {
       throw UnimplementedError();
 
   @override
-  Future<List<ConquestFeedItem>> fetchStories({int limit = 20}) =>
+  Future<List<ConquestFeedItem>> fetchStories({int limit = 20, String? userId}) =>
       throw UnimplementedError();
 }
