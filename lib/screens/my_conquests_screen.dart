@@ -115,9 +115,13 @@ class _OwnershipMeta extends ConsumerWidget {
             color: AppColors.textSecondary,
           ),
           const SizedBox(width: 5),
-          Text(
-            post.isArchived ? '$visibility · Archivada' : visibility,
-            style: AppTextStyles.caption,
+          Flexible(
+            child: Text(
+              post.isArchived ? '$visibility · Archivada' : visibility,
+              style: AppTextStyles.caption,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           const Spacer(),
           if (views != null)

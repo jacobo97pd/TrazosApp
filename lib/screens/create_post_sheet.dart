@@ -119,110 +119,120 @@ class _CreatePostSheetState extends ConsumerState<_CreatePostSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-          20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Deja tu huella', style: AppTextStyles.headlineMedium),
-          const SizedBox(height: 4),
-          Text('Conquistaste ${widget.ctx.zoneName}.',
-              style: AppTextStyles.caption),
-          const SizedBox(height: 16),
-          if (_pickedBytes != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: Image.memory(_pickedBytes!,
-                  height: 180, width: double.infinity, fit: BoxFit.cover),
+    // Limita la altura y permite scroll: con el teclado abierto en pantallas
+    // pequeñas el contenido nunca desborda.
+    final maxHeight = MediaQuery.of(context).size.height * 0.9;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+            20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Deja tu huella', style: AppTextStyles.headlineMedium),
+            const SizedBox(height: 4),
+            Text('Conquistaste ${widget.ctx.zoneName}.',
+                style: AppTextStyles.caption),
+            const SizedBox(height: 16),
+            if (_pickedBytes != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Image.memory(_pickedBytes!,
+                    height: 180, width: double.infinity, fit: BoxFit.cover),
+              ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        _pick(ImageSource.camera, ConquestType.selfie),
+                    icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                    label: const Text('Selfie'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        _pick(ImageSource.gallery, ConquestType.photo),
+                    icon: const Icon(Icons.image_outlined, size: 18),
+                    label: const Text('Foto'),
+                  ),
+                ),
+              ],
             ),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () =>
-                      _pick(ImageSource.camera, ConquestType.selfie),
-                  icon: const Icon(Icons.camera_alt_outlined, size: 18),
-                  label: const Text('Selfie'),
-                ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _caption,
+              maxLength: 200,
+              minLines: 1,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Escribe algo (opcional)',
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () =>
-                      _pick(ImageSource.gallery, ConquestType.photo),
-                  icon: const Icon(Icons.image_outlined, size: 18),
-                  label: const Text('Foto'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _caption,
-            maxLength: 200,
-            minLines: 1,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Escribe algo (opcional)',
             ),
-          ),
-          Row(
-            children: [
-              Text('Visibilidad', style: AppTextStyles.caption),
-              const SizedBox(width: 12),
-              DropdownButton<ConquestVisibility>(
-                value: _visibility,
-                dropdownColor: AppColors.surface,
-                onChanged: (v) => setState(() => _visibility = v!),
-                items: const [
-                  DropdownMenuItem(
-                      value: ConquestVisibility.onlyMe, child: Text('Solo yo')),
-                  DropdownMenuItem(
-                      value: ConquestVisibility.connections,
-                      child: Text('Conexiones')),
-                  DropdownMenuItem(
-                      value: ConquestVisibility.public,
-                      child: Text('Público en Trazos')),
-                ],
-              ),
-            ],
-          ),
-          SwitchListTile.adaptive(
-            contentPadding: EdgeInsets.zero,
-            value: _isStory,
-            activeThumbColor: AppColors.accent,
-            onChanged:
-                _busy ? null : (value) => setState(() => _isStory = value),
-            secondary: const Icon(Icons.auto_awesome_outlined),
-            title: const Text('Compartir como historia'),
-            subtitle: const Text('Desaparece automáticamente en 24 horas'),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _busy ? null : () => _submit(private: true),
-                  child: const Text('Guardar en privado'),
+            Row(
+              children: [
+                Text('Visibilidad', style: AppTextStyles.caption),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: DropdownButton<ConquestVisibility>(
+                    value: _visibility,
+                    isExpanded: true,
+                    dropdownColor: AppColors.surface,
+                    onChanged: (v) => setState(() => _visibility = v!),
+                    items: const [
+                      DropdownMenuItem(
+                          value: ConquestVisibility.onlyMe,
+                          child: Text('Solo yo')),
+                      DropdownMenuItem(
+                          value: ConquestVisibility.connections,
+                          child: Text('Conexiones')),
+                      DropdownMenuItem(
+                          value: ConquestVisibility.public,
+                          child: Text('Público en Trazos')),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _busy ? null : () => _submit(private: false),
-                  child: _busy
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Publicar'),
+              ],
+            ),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              value: _isStory,
+              activeThumbColor: AppColors.accent,
+              onChanged:
+                  _busy ? null : (value) => setState(() => _isStory = value),
+              secondary: const Icon(Icons.auto_awesome_outlined),
+              title: const Text('Compartir como historia'),
+              subtitle: const Text('Desaparece automáticamente en 24 horas'),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _busy ? null : () => _submit(private: true),
+                    child: const Text('Guardar en privado'),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _busy ? null : () => _submit(private: false),
+                    child: _busy
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Text('Publicar'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
