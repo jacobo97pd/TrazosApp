@@ -130,11 +130,8 @@ class RunNotifier extends Notifier<RunState> {
 
   Future<void> startRun() async {
     if (!kSimulateLocation) {
-      final permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        return;
-      }
+      final granted = await _ensureLocationPermission();
+      if (!granted) return;
     } else {
       // Modo simulación: siembra el punto de partida en la última ubicación
       // conocida si la hay (si no, se queda en el centro de Madrid por defecto).
@@ -376,6 +373,34 @@ class RunNotifier extends Notifier<RunState> {
 
   // Ajustes de localización con servicio en primer plano: el GPS sigue
   // registrando con la app en segundo plano o el móvil bloqueado.
+  /// Solicita permiso de ubicación para la carrera. Pide "Mientras se usa" y,
+  /// si se concede, intenta elevar a "Siempre" para que la ruta se registre con
+  /// la pantalla bloqueada (rastreo GPS en segundo plano). No bloquea la carrera
+  /// si el usuario decide mantener solo "Mientras se usa": el registro seguirá
+  /// funcionando en primer plano. Devuelve false solo si no hay ningún permiso.
+  Future<bool> _ensureLocationPermission() async {
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return false;
+    }
+    // Ya tenemos al menos "Mientras se usa". Para el rastreo en segundo plano
+    // hace falta "Siempre": en iOS, volver a pedir permiso cuando el estado es
+    // whileInUse muestra el diálogo de elevación a "Siempre".
+    if (permission == LocationPermission.whileInUse) {
+      try {
+        await Geolocator.requestPermission();
+      } catch (_) {
+        // Si la elevación falla o el usuario la rechaza, seguimos con
+        // "Mientras se usa" (la carrera funciona en primer plano).
+      }
+    }
+    return true;
+  }
+
   LocationSettings _locationSettings() {
     if (kIsWeb) {
       return const LocationSettings(
