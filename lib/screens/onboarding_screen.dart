@@ -35,7 +35,7 @@ const _pages = [
   _OnboardPage(
     icon:        Icons.emoji_events_rounded,
     title:       'Defiende tu territorio',
-    subtitle:    'Si no corres en 7 días, cualquiera\npuede robarte la zona.',
+    subtitle:    'Si no corres en 30 días, cualquiera\npuede robarte la zona.',
     accentColor: AppColors.gold,
   ),
 ];

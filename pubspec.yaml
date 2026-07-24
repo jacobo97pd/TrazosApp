@@ -2,7 +2,7 @@ name: runrace
 description: Conquista zonas corriendo. Compite, captura, domina.
 publish_to: 'none'
 
-version: 1.0.26+34
+version: 1.0.27+35
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
