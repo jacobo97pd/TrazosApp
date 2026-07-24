@@ -6,8 +6,6 @@ import 'package:go_router/go_router.dart';
 import '../core/theme.dart';
 import '../core/router.dart';
 import '../core/constants.dart';
-import '../dev/location_simulator.dart';
-import '../dev/sim_joystick.dart';
 import '../providers/run_provider.dart';
 import '../providers/zones_provider.dart';
 import 'create_post_sheet.dart';
@@ -141,31 +139,6 @@ class _RunScreenState extends ConsumerState<RunScreen> {
 
           // ── HUD superior ───────────────────────────────────────────────────
           Positioned(top: 0, left: 0, right: 0, child: _RunHud(run: run)),
-
-          // ── Joystick de simulación (solo pruebas) ──────────────────────────
-          if (kSimulateLocation &&
-              !run.isPolygonClosed &&
-              run.captureResult == null)
-            Positioned(
-              left: 20,
-              bottom: 190,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SimJoystick(),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface.withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text('SIMULACIÓN', style: AppTextStyles.caption),
-                  ),
-                ],
-              ),
-            ),
 
           // ── Zona inferior ──────────────────────────────────────────────────
           Positioned(

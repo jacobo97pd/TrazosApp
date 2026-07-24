@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'firebase_options.dart';
 import 'core/router.dart';
 import 'core/theme.dart';
-import 'dev/location_simulator.dart';
 import 'providers/auth_provider.dart';
 import 'services/notification_service.dart';
 import 'services/strava_service.dart';
@@ -47,9 +46,6 @@ Future<void> main() async {
   );
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-  // Estado del modo simulación (Ajustes → Modo simulación), apagado por defecto.
-  await LocationSimulator.load();
 
   // El tracking en segundo plano lo gestiona geolocator con un foreground
   // service de localización (ver RunNotifier._locationSettings): el GPS sigue

@@ -30,15 +30,17 @@ workflows:
           xcode-project use-profiles
       - name: Build iOS IPA
         script: |
-          flutter build ipa --release -t lib/main.dart --build-number=$PROJECT_BUILD_NUMBER --export-options-plist=/Users/builder/export_options.plist
+          BUILD_NUMBER=$(sed -n 's/^version:.*+//p' pubspec.yaml | head -n 1)
+          echo "Building IPA with CFBundleVersion: $BUILD_NUMBER"
+          flutter build ipa --release -t lib/main.dart --build-number="$BUILD_NUMBER" --export-options-plist=/Users/builder/export_options.plist
       - name: Verify IPA build number
         script: |
           IPA_PATH=$(find build/ios/ipa -name '*.ipa' -type f | head -n 1)
           unzip -q "$IPA_PATH" -d /tmp/trazos_ipa
           BUILD_NUMBER=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' /tmp/trazos_ipa/Payload/*.app/Info.plist)
           echo "IPA CFBundleVersion: $BUILD_NUMBER"
-          if [ "$BUILD_NUMBER" -le 28 ]; then
-            echo "CFBundleVersion must be greater than 28"
+          if [ "$BUILD_NUMBER" -le 33 ]; then
+            echo "CFBundleVersion must be greater than 33"
             exit 1
           fi
     artifacts:
