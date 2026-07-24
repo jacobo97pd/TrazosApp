@@ -21,7 +21,7 @@ const auth = getAuth();
 // Región EU — ajustar a europe-west3 (Frankfurt) si prefieres
 const REGION = "europe-west1";
 
-const ZONE_EXPIRATION_DAYS = 7;
+const ZONE_EXPIRATION_DAYS = 30;
 const MIN_POLYGON_POINTS   = 4;
 const MIN_PERIMETER_M      = 500;
 const MIN_AREA_M2          = 1000; // territorio mínimo válido (~un bloque)
