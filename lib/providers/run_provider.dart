@@ -13,7 +13,6 @@ import '../core/constants.dart';
 import '../conquest/conquest_providers.dart';
 import '../conquest/zone_conquest.dart';
 import '../conquest/zone_conquest_service.dart';
-import '../dev/location_simulator.dart';
 import '../services/zone_capture_service.dart';
 
 // Auto-cierre del cerco: vuelves cerca del punto de inicio tras alejarte.
@@ -129,20 +128,8 @@ class RunNotifier extends Notifier<RunState> {
   RunState build() => const RunState();
 
   Future<void> startRun() async {
-    if (!kSimulateLocation) {
-      final granted = await _ensureLocationPermission();
-      if (!granted) return;
-    } else {
-      // Modo simulación: siembra el punto de partida en la última ubicación
-      // conocida si la hay (si no, se queda en el centro de Madrid por defecto).
-      try {
-        final last = await Geolocator.getLastKnownPosition();
-        if (last != null) {
-          LocationSimulator.instance.lat = last.latitude;
-          LocationSimulator.instance.lng = last.longitude;
-        }
-      } catch (_) {/* sin GPS: usa el punto por defecto del simulador */}
-    }
+    final granted = await _ensureLocationPermission();
+    if (!granted) return;
 
     _maxDistFromStart = 0;
     _startedAt = DateTime.now();
@@ -174,7 +161,6 @@ class RunNotifier extends Notifier<RunState> {
   // Finaliza la sesión (botón Parar/Finalizar): guarda si no se guardó y resetea.
   Future<void> stopRun() async {
     _timer?.cancel();
-    if (kSimulateLocation) LocationSimulator.instance.stop();
     await _locationSub?.cancel();
     if (state.lastSaved == null) await _saveRun();
     _maxDistFromStart = 0;
@@ -198,10 +184,8 @@ class RunNotifier extends Notifier<RunState> {
   }
 
   void _startLocationTracking() {
-    // En modo simulación el joystick alimenta las posiciones; si no, GPS real.
-    final stream = kSimulateLocation
-        ? LocationSimulator.instance.positions
-        : Geolocator.getPositionStream(locationSettings: _locationSettings());
+    final stream =
+        Geolocator.getPositionStream(locationSettings: _locationSettings());
     _locationSub = stream.listen((position) {
       if (state.isPolygonClosed) return; // ya cerrado, ignorar
       final newPoint = LatLng(position.latitude, position.longitude);
@@ -247,9 +231,6 @@ class RunNotifier extends Notifier<RunState> {
 
       _checkAutoClose();
     });
-
-    // Emite la posición de partida para que la ruta tenga un primer punto.
-    if (kSimulateLocation) LocationSimulator.instance.begin();
   }
 
   // Cierra el cerco automáticamente al volver al inicio (tras alejarte y correr
